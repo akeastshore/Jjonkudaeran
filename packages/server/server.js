@@ -12,10 +12,12 @@ import { userDB, scoreDB, statsDB } from './db.js';
 dotenv.config();
 
 const app = express();
-const PORT = process.env.PORT || 3001;
+
+app.set('trust proxy', 1);
+const PORT = process.env.PORT || 2567;
 
 app.use(cors({
-  origin: process.env.CLIENT_URL || 'http://localhost:5173',
+  origin: true,
   credentials: true
 }));
 app.use(express.json());
@@ -24,7 +26,12 @@ app.use(session({
   secret: process.env.SESSION_SECRET || 'your-secret-key',
   resave: false,
   saveUninitialized: false,
-  cookie: { maxAge: 24 * 60 * 60 * 1000 }
+  cookie: {
+    httpOnly: true,     // 자바스크립트로 쿠키 접근 불가 (보안)
+    secure: false,      // http 환경이므로 false (https면 true)
+    sameSite: 'lax',    // ★ [추가] 이게 중요합니다. (strict, lax, none 중 lax 추천)
+    maxAge: 1000 * 60 * 60 * 24 // 쿠키 유효기간 (예: 1일)
+  }
 }));
 
 app.use(passport.initialize());
@@ -33,7 +40,7 @@ app.use(passport.session());
 const httpServer = createServer(app);
 const io = new Server(httpServer, {
   cors: {
-    origin: process.env.CLIENT_URL || "http://localhost:5173",
+    origin: true,
     methods: ["GET", "POST"],
     credentials: true
   }
@@ -301,7 +308,7 @@ io.on('connection', (socket) => {
 passport.use(new GoogleStrategy({
     clientID: process.env.GOOGLE_CLIENT_ID,
     clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-    callbackURL: process.env.GOOGLE_CALLBACK_URL,
+    callbackURL: "http://172.10.5.111.nip.io/auth/google/callback",
   },
   async function(accessToken, refreshToken, profile, done) {
     try {
@@ -315,10 +322,27 @@ passport.use(new GoogleStrategy({
   }
 ));
 
-passport.serializeUser((user, done) => done(null, user.id));
+passport.serializeUser((user, done) => {
+  console.log("✅ 로그인 성공! 세션에 저장할 ID:", user.id); // 로그 추가
+  done(null, user.id); // 보통 user.id (숫자)만 저장합니다.
+});
+
 passport.deserializeUser(async (id, done) => {
-  try { const user = await userDB.findById(id); done(null, user); } 
-  catch (error) { done(error, null); }
+  console.log("🔄 유저 정보 복구 시도. ID:", id); // 로그 추가
+  try {
+    const user = await userDB.findById(id); 
+
+      if (user) {
+        console.log("🙆‍♂️ 유저 찾음:", user.name || user.email);
+        done(null, user);
+      } else {
+        console.log("🙅‍♂️ DB에 유저가 없음");
+        done(null, false);
+      }
+    } catch (err) {
+      console.error("❌ 유저 복구 중 에러:", err);
+      done(err);
+    }
 });
 
 app.get('/auth/google', (req, res, next) => {
@@ -329,17 +353,25 @@ app.get('/auth/google', (req, res, next) => {
 app.get('/auth/google/callback', 
   passport.authenticate('google', { failureRedirect: '/' }),
   (req, res) => {
-    const frontendURL = process.env.CLIENT_URL || 'http://localhost:5173';
-    res.send(`
-      <script>
-        if (window.opener) {
-          window.opener.postMessage({ type: 'LOGIN_SUCCESS' }, '*');
-          window.close();
-        } else {
-          window.location.href = '${frontendURL}';
-        }
-      </script>
-    `);
+    // 배포 환경이므로 IP 주소로 기본값 변경 (중요!)
+    const frontendURL = process.env.CLIENT_URL || 'http://172.10.5.111.nip.io'; 
+
+    // ★ [핵심] 세션 저장이 끝난 뒤에 콜백함수가 실행됩니다.
+    req.session.save(() => {
+        res.send(`
+          <script>
+            if (window.opener) {
+              // 1. 부모 창(게임 화면)에 성공 신호 보냄
+              window.opener.postMessage({ type: 'LOGIN_SUCCESS' }, '*');
+              // 2. 팝업 닫기
+              window.close();
+            } else {
+              // 팝업이 아닐 경우 메인으로 이동
+              window.location.href = '${frontendURL}';
+            }
+          </script>
+        `);
+    });
   }
 );
 
