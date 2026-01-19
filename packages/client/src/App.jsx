@@ -33,11 +33,56 @@ function App() {
   const [roomPlayers, setRoomPlayers] = useState({}); // 방 전체 플레이어 정보
 
   const characters = [
-    { id: 1, name: '전사 셰프', img: 'https://via.placeholder.com/300/FF5733/FFFFFF?text=Chef+W' },
-    { id: 2, name: '마법사 셰프', img: 'https://via.placeholder.com/300/33FF57/FFFFFF?text=Chef+M' },
-    { id: 3, name: '궁수 셰프', img: 'https://via.placeholder.com/300/3357FF/FFFFFF?text=Chef+A' },
-    { id: 4, name: '도적 셰프', img: 'https://via.placeholder.com/300/F3FF33/000000?text=Chef+R' },
-    { id: 5, name: '성직자 셰프', img: 'https://via.placeholder.com/300/FF33F3/FFFFFF?text=Chef+P' },
+    { 
+      id: 1, 
+      name: '멜로', 
+      img: '/assets/characters/character1_front.png',
+      imgFront: '/assets/characters/character1_front.png',
+      imgBack: '/assets/characters/character1_back.png',
+      imgLeft: '/assets/characters/character1_left.png',
+      imgRight: '/assets/characters/character1_right.png',
+      color: '#FF5733' 
+    },
+    { 
+      id: 2, 
+      name: '버디', 
+      img: '/assets/characters/character2_front.png',
+      imgFront: '/assets/characters/character2_front.png',
+      imgBack: '/assets/characters/character2_back.png',
+      imgLeft: '/assets/characters/character2_left.png',
+      imgRight: '/assets/characters/character2_right.png',
+      color: '#33FF57' 
+    },
+    { 
+      id: 3, 
+      name: '치오', 
+      img: '/assets/characters/character3_front.png',
+      imgFront: '/assets/characters/character3_front.png',
+      imgBack: '/assets/characters/character3_back.png',
+      imgLeft: '/assets/characters/character3_left.png',
+      imgRight: '/assets/characters/character3_right.png',
+      color: '#3357FF' 
+    },
+    { 
+      id: 4, 
+      name: '쿠키', 
+      img: '/assets/characters/character4_front.png',
+      imgFront: '/assets/characters/character4_front.png',
+      imgBack: '/assets/characters/character4_back.png',
+      imgLeft: '/assets/characters/character4_left.png',
+      imgRight: '/assets/characters/character4_right.png',
+      color: '#F3FF33' 
+    },
+    { 
+      id: 5, 
+      name: '코코', 
+      img: '/assets/characters/character5_front.png',
+      imgFront: '/assets/characters/character5_front.png',
+      imgBack: '/assets/characters/character5_back.png',
+      imgLeft: '/assets/characters/character5_left.png',
+      imgRight: '/assets/characters/character5_right.png',
+      color: '#FF33F3' 
+    },
   ];
 
   // ------------------------------------------------
@@ -265,6 +310,53 @@ function App() {
         return (
           <div className="login-screen">
             <h1>두바이 쫀득 쿠키 게임</h1>
+            
+            {/* 게스트 로그인 */}
+            <div style={{ marginBottom: '20px' }}>
+              <input 
+                type="text" 
+                placeholder="닉네임을 입력하세요" 
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                onKeyPress={(e) => {
+                  if (e.key === 'Enter' && username.trim()) {
+                    setScreen('home');
+                  }
+                }}
+                style={{ 
+                  padding: '15px 30px', 
+                  fontSize: '18px', 
+                  marginRight: '10px',
+                  borderRadius: '5px',
+                  border: '2px solid #ccc',
+                  minWidth: '250px'
+                }}
+              />
+              <button 
+                onClick={() => {
+                  if (username.trim()) {
+                    setScreen('home');
+                  } else {
+                    alert('닉네임을 입력해주세요!');
+                  }
+                }}
+                style={{ 
+                  padding: '15px 30px', 
+                  fontSize: '18px', 
+                  cursor: 'pointer', 
+                  backgroundColor: '#4CAF50', 
+                  color: 'white',
+                  border: 'none', 
+                  borderRadius: '5px',
+                  fontWeight: 'bold'
+                }}>
+                🎮 게임 시작
+              </button>
+            </div>
+
+            <div style={{ margin: '20px 0', color: '#999' }}>또는</div>
+
+            {/* 구글 로그인 (선택사항) */}
             <button onClick={handleGoogleLogin} style={{ padding: '15px 30px', fontSize: '18px', cursor: 'pointer', backgroundColor: '#fff', border: '1px solid #ccc', borderRadius: '5px' }}>
               🌏 구글 계정으로 시작하기
             </button>
