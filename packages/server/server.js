@@ -11,7 +11,6 @@ import { userDB, scoreDB, statsDB } from './db.js';
 
 dotenv.config();
 
-const express = require('express');
 const app = express();
 
 app.set('trust proxy', 1);
@@ -305,11 +304,16 @@ io.on('connection', (socket) => {
   });
 });
 
+
+const GOOGLE_CALLBACK_URL = process.env.NODE_ENV === 'production'
+  ? 'http://172.10.5.111.nip.io/auth/google/callback'  // 배포용 (학교)
+  : 'http://localhost:2567/auth/google/callback';      // 개발용 (내 컴퓨터)
+
 // --- Passport & API ---
 passport.use(new GoogleStrategy({
     clientID: process.env.GOOGLE_CLIENT_ID,
     clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-    callbackURL: "http://172.10.5.111.nip.io/auth/google/callback",
+    callbackURL: GOOGLE_CALLBACK_URL,
   },
   async function(accessToken, refreshToken, profile, done) {
     try {
@@ -355,7 +359,9 @@ app.get('/auth/google/callback',
   passport.authenticate('google', { failureRedirect: '/' }),
   (req, res) => {
     // 배포 환경이므로 IP 주소로 기본값 변경 (중요!)
-    const frontendURL = process.env.CLIENT_URL || 'http://172.10.5.111.nip.io'; 
+    const frontendURL = process.env.NODE_ENV === 'production'
+      ? 'http://172.10.5.111.nip.io' // 학교 서버
+      : 'http://localhost:5173';      // 내 컴퓨터 (Vite 포트)
 
     // ★ [핵심] 세션 저장이 끝난 뒤에 콜백함수가 실행됩니다.
     req.session.save(() => {
