@@ -13,16 +13,6 @@ dotenv.config();
 
 const express = require('express');
 const app = express();
-app.use((req, res, next) => {
-    console.log(`\n============== [CCTV] 요청 감지 ==============`);
-    console.log(`📍 주소: ${req.path}`);
-    console.log(`🍪 쿠키:`, req.headers.cookie); // 쿠키가 오는지 확인
-    console.log(`🔑 세션ID: ${req.sessionID}`);   // 세션 ID가 유지되는지 확인
-    console.log(`👤 유저정보:`, req.user);          // 여기에 정보가 있는지 확인
-    console.log(`==============================================\n`);
-    next();
-});
-
 
 app.set('trust proxy', 1);
 const PORT = process.env.PORT || 2567;
@@ -341,21 +331,19 @@ passport.serializeUser((user, done) => {
 passport.deserializeUser(async (id, done) => {
   console.log("🔄 유저 정보 복구 시도. ID:", id); // 로그 추가
   try {
-    // [중요] 여기서 DB 조회를 합니다.
-    // 기존 코드가 pool.query인지, User.findById인지 확인하세요.
-    const [rows] = await pool.query('SELECT * FROM users WHERE id = ?', [id]);
-    
-    if (rows.length > 0) {
-      console.log("🙆‍♂️ 유저 찾음:", rows[0].name || rows[0].display_name); // 로그 추가
-      done(null, rows[0]);
-    } else {
-      console.log("🙅‍♂️ DB에 유저가 없음 (ID는 있는데 데이터가 삭제됨?)"); // 로그 추가
-      done(null, false);
+    const user = await userDB.findById(id); 
+
+      if (user) {
+        console.log("🙆‍♂️ 유저 찾음:", user.name || user.email);
+        done(null, user);
+      } else {
+        console.log("🙅‍♂️ DB에 유저가 없음");
+        done(null, false);
+      }
+    } catch (err) {
+      console.error("❌ 유저 복구 중 에러:", err);
+      done(err);
     }
-  } catch (err) {
-    console.error("❌ 유저 복구 중 에러:", err);
-    done(err);
-  }
 });
 
 app.get('/auth/google', (req, res, next) => {
