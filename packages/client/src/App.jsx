@@ -3,12 +3,16 @@ import { useState, useEffect, useRef } from 'react';
 import GameCanvas from './GameCanvas';
 import './App.css';
 import MultiLobby from './MultiLobby'; 
-import { io } from "socket.io-client"; 
+// import { io } from "socket.io-client"; // ★ 삭제 (Context가 대신함)
+import { useGameContext } from './context/GameContext'; // ★ 추가
 
 function App() {
+  // ★ Context에서 함수 가져오기
+  const { connectSocket, disconnectSocket, getServerUrl } = useGameContext();
+
   // --- 상태 관리 ---
   const [username, setUsername] = useState('');
-  const [screen, setScreen] = useState('login'); // login, home, single, gameplay, result...
+  const [screen, setScreen] = useState('login'); 
 
   // 게임 데이터
   const [selectedChar, setSelectedChar] = useState(null);
@@ -25,12 +29,11 @@ function App() {
   const [gameMode, setGameMode] = useState('single'); 
   const [waitingInfo, setWaitingInfo] = useState({ current: 0, max: 0, members: [] });
   
-  // ★ [NEW] 로비 설정용 인원수 (기본 2명)
   const [lobbyCapacity, setLobbyCapacity] = useState(2);
 
   const timerRef = useRef(null);
   const [resultTimeLeft, setResultTimeLeft] = useState(10);
-  const [roomPlayers, setRoomPlayers] = useState({}); // 방 전체 플레이어 정보
+  const [roomPlayers, setRoomPlayers] = useState({});
 
   const characters = [
     { id: 1, name: '전사 셰프', img: 'https://via.placeholder.com/300/FF5733/FFFFFF?text=Chef+W' },
@@ -44,8 +47,9 @@ function App() {
   // 1. 방 만들기 (방장)
   // ------------------------------------------------
   const handleCreateRoom = (maxPlayers) => {
-    const newSocket = io("http://localhost:3001");
-    setSocket(newSocket);
+    // ★ Context를 통해 소켓 연결 (주소 자동 결정)
+    const newSocket = connectSocket();
+    setSocket(newSocket); // 기존 로직 유지를 위해 state에도 저장
 
     // 서버에 "방 만들어줘" 요청
     newSocket.emit('createRoom', { maxPlayers, nickname: username });
@@ -54,7 +58,7 @@ function App() {
     newSocket.on('roomCreated', (code) => {
       setRoomId(code);
       setGameMode('multi');
-      setScreen('waiting_room'); // 대기실로 이동
+      setScreen('waiting_room'); 
     });
 
     setupSocketListeners(newSocket);
@@ -65,7 +69,9 @@ function App() {
   // ------------------------------------------------
   const handleJoinRoom = (code) => {
     if (!code) return alert("코드를 입력하세요");
-    const newSocket = io("http://localhost:3001");
+    
+    // ★ Context를 통해 소켓 연결
+    const newSocket = connectSocket();
     setSocket(newSocket);
 
     // 서버에 "들여보내줘" 요청
@@ -74,7 +80,7 @@ function App() {
     setupSocketListeners(newSocket);
     setRoomId(code);
     setGameMode('multi');
-    setScreen('waiting_room'); // 대기실로 이동
+    setScreen('waiting_room'); 
   };
 
   // 공통 소켓 리스너
@@ -82,16 +88,17 @@ function App() {
     // 에러 처리
     s.on('error', (msg) => {
       alert(msg);
-      s.disconnect();
+      disconnectSocket(); // ★ Context 함수 사용
+      setSocket(null);
       setScreen('lobby');
     });
 
-    // 대기실 인원 현황 업데이트 (1/2명...)
+    // 대기실 인원 현황 업데이트
     s.on('waitingUpdate', (info) => {
       setWaitingInfo(info);
     });
 
-    // ★ [핵심] 전원 입장 완료 -> 캐릭터 선택창으로 이동!
+    // 전원 입장 완료 -> 캐릭터 선택창
     s.on('allPlayersJoined', () => {
       setScreen('multi_lobby'); 
     });
@@ -101,31 +108,24 @@ function App() {
     });
     
     s.on('restartGame', () => {
-      // 상태 초기화
       setScore(0);
       setTimeLeft(120);
       setCountDown(3);
       setIsPlaying(false);
-      
-      // 화면 전환 (Result -> Gameplay)
       setScreen('gameplay');
     });
     
-    // 누가 나가서 방 터짐
     s.on('playerLeft', () => {
         alert("플레이어가 퇴장하여 방이 사라졌습니다.");
         window.location.reload();
     });
 
-    // setupSocketListeners 내부 수정
     s.on('roomUpdate', (playersData) => {
-        setRoomPlayers(playersData); // ★ 전체 데이터 저장
-        
-        // waitingInfo 호환성 유지 (기존 코드)
+        setRoomPlayers(playersData); 
         const members = Object.values(playersData).map(p => p.nickname);
         setWaitingInfo({ 
           current: Object.keys(playersData).length, 
-          max: 0, // 이건 서버 roomInfo에서 따로 안 보내주면 모를 수 있음 (일단 패스)
+          max: 0, 
           members: members 
         });
     });
@@ -133,7 +133,9 @@ function App() {
 
   // --- [구글 로그인 핸들러] ---
   const handleGoogleLogin = () => {
-    const backendUrl = "http://localhost:3001/auth/google?popup=true";
+    // ★ 서버 주소 동적 할당 (Localhost vs KCLOUD)
+    const backendUrl = `${getServerUrl()}/auth/google?popup=true`;
+    
     const width = 500;
     const height = 600;
     const left = window.screenX + (window.outerWidth - width) / 2;
@@ -156,7 +158,8 @@ function App() {
       console.log("✅ 팝업에서 로그인 성공 신호를 받았습니다!");
 
       try {
-        const res = await fetch('http://localhost:3001/api/me', {
+        // ★ API 주소 동적 할당
+        const res = await fetch(`${getServerUrl()}/api/me`, {
           method: 'GET',
           credentials: 'include',
         });
@@ -175,18 +178,17 @@ function App() {
     };
     window.addEventListener('message', handleMessage);
     return () => window.removeEventListener('message', handleMessage);
-  }, []);
+  }, []); // eslint-disable-next-line
 
   // ★ 결과 화면 10초 카운트다운 & 자동 퇴장
   useEffect(() => {
     if (screen === 'result') {
-      setResultTimeLeft(10); // 타이머 초기화
+      setResultTimeLeft(10); 
 
       const timer = setInterval(() => {
         setResultTimeLeft(prev => {
           if (prev <= 1) {
             clearInterval(timer);
-            // 시간이 다 되면 홈으로 이동
             handleGoHome(); 
             return 0;
           }
@@ -200,10 +202,8 @@ function App() {
 
   // 홈으로 가는 함수 (소켓 정리 포함)
   const handleGoHome = () => {
-    if (socket) {
-        socket.disconnect(); // 방 나가기
-        setSocket(null);
-    }
+    disconnectSocket(); // ★ Context 함수로 소켓 정리
+    setSocket(null);
     setGameMode('single');
     setRoomId('');
     setScreen('home');
@@ -265,7 +265,7 @@ function App() {
         return (
           <div className="login-screen">
             <h1>두바이 쫀득 쿠키 게임</h1>
-            <button onClick={handleGoogleLogin} style={{ padding: '15px 30px', fontSize: '18px', cursor: 'pointer', backgroundColor: '#fff', border: '1px solid #ccc', borderRadius: '5px' }}>
+            <button onClick={handleGoogleLogin} style={{ padding: '15px 30px', fontSize: '18px', cursor: 'pointer', backgroundColor: '#4f4f4f', border: '1px solid #ccc', borderRadius: '5px' }}>
               🌏 구글 계정으로 시작하기
             </button>
           </div>
@@ -290,12 +290,11 @@ function App() {
              <h2>멀티플레이</h2>
              <div style={{ display:'flex', gap:'20px', justifyContent:'center', alignItems:'flex-start' }}>
                 
-                {/* [수정됨] 왼쪽: 방 만들기 */}
+                {/* 방 만들기 */}
                 <div style={{ background: '#444', padding:'30px', borderRadius:'15px', width:'250px' }}>
                     <h3>방 만들기</h3>
                     <p style={{marginBottom:'20px'}}>인원 수 설정</p>
                     
-                    {/* ★ 인원수 조절 UI (화살표) */}
                     <div style={{ 
                       display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '20px', 
                       marginBottom: '20px', background: '#333', padding: '10px', borderRadius: '10px' 
@@ -324,13 +323,13 @@ function App() {
                     <button 
                       className="menu-button" 
                       style={{ width: '100%', background: '#4CAF50' }}
-                      onClick={() => handleCreateRoom(lobbyCapacity)} // 설정한 인원수로 방 생성
+                      onClick={() => handleCreateRoom(lobbyCapacity)} 
                     >
                       방 만들기
                     </button>
                 </div>
 
-                {/* 오른쪽: 방 참가하기 */}
+                {/* 방 참가하기 */}
                 <div style={{ background: '#555', padding:'30px', borderRadius:'15px', width:'250px' }}>
                     <h3>방 참가하기</h3>
                     <p style={{marginBottom:'20px'}}>초대 코드를 입력하세요</p>
@@ -406,7 +405,6 @@ function App() {
         );
 
       case 'gameplay':
-        // 멀티플레이 시 캐릭터 정보가 없으면 기본값 (1번) 사용
         const myCharacter = characters.find(c => c.id === selectedChar) || characters[0];
         return (
           <div className="game-screen-wrapper" style={{ position: 'relative' }}>
@@ -438,7 +436,6 @@ function App() {
         );
 
       case 'result':
-        // 내 상태 확인
         const amIVoted = socket && roomPlayers[socket.id]?.wantsRestart;
 
         return (
@@ -454,7 +451,6 @@ function App() {
               
               <hr style={{ borderColor: '#555', margin: '20px 0' }} />
 
-              {/* ★ 멀티플레이일 때만 보이는 투표 현황 */}
               {gameMode === 'multi' && (
                 <div style={{ marginBottom: '20px' }}>
                    <h3>재도전 대기 중... ({resultTimeLeft}초)</h3>
@@ -463,7 +459,7 @@ function App() {
                         <div key={idx} style={{ 
                            padding: '10px 20px', 
                            borderRadius: '20px',
-                           background: p.wantsRestart ? '#4CAF50' : '#555', // 눌렀으면 초록색
+                           background: p.wantsRestart ? '#4CAF50' : '#555', 
                            color: 'white',
                            border: '2px solid white',
                            opacity: p.wantsRestart ? 1 : 0.5
@@ -483,14 +479,14 @@ function App() {
               <button 
                 className="menu-button" 
                 style={{ 
-                  backgroundColor: amIVoted ? '#f44336' : '#2196F3', // 취소(빨강) / 투표(파랑)
+                  backgroundColor: amIVoted ? '#f44336' : '#2196F3',
                   minWidth: '150px'
                 }}
                 onClick={() => {
                   if (gameMode === 'multi' && socket) {
-                     socket.emit('voteRestart'); // ★ 투표 신호 전송
+                     socket.emit('voteRestart'); 
                   } else {
-                     setScreen('gameplay'); // 싱글이면 바로 시작
+                     setScreen('gameplay'); 
                   }
                 }}>
                 {gameMode === 'multi' 
