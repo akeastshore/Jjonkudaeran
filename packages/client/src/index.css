@@ -1,0 +1,7 @@
+@font-face {
+  font-family: 'yangjae_inital';  /* ★ 여기서 정한 이름으로 나중에 불러옵니다! */
+  src: url('./assets/fonts/YINP05.TTF') format('truetype'); 
+  /* ▲ 파일 경로가 정확해야 합니다! 파일명도 꼭 확인하세요. */
+  font-weight: normal;
+  font-style: normal;
+}
