@@ -1,6 +1,5 @@
 // src/GameCanvas.jsx (최종 수정)
 import { useEffect, useRef } from 'react';
-// import { io } from "socket.io-client";  <-- 이거 이제 필요 없음! (App에서 받아옴)
 
 const GameCanvas = ({ selectedChar, isPlaying, onBurgerDelivered, score, isMultiplayer, roomId, socketProp }) => {
   const canvasRef = useRef(null);
@@ -32,6 +31,7 @@ const GameCanvas = ({ selectedChar, isPlaying, onBurgerDelivered, score, isMulti
     toastedKadaif: '/assets/ingredients/kadaif_toasted.png', // 볶은 카다이프
     whiteChoco: '/assets/ingredients/white_chocolate.png',
     meltedWhiteChoco: '/assets/ingredients/white_chocolate_melted.png', // 녹은 화이트초콜릿
+    whiteChoco_pistachio: '/assets/ingredients/whitechocolate_pistachiospread.png', // 화이트초콜릿 + 피스타치오
     butter: '/assets/ingredients/butter.png',
     butter_v2: '/assets/ingredients/butter_v2.png', // 집은 버터
     marshmallow: '/assets/ingredients/marshmallow.png',
@@ -55,6 +55,8 @@ const GameCanvas = ({ selectedChar, isPlaying, onBurgerDelivered, score, isMulti
     fire: '/assets/tools/burner.png',          // 불
     blend: '/assets/tools/blender_closed.png', // 믹서기
     peel: '/assets/tools/tray.png',            // 까기
+    package: '/assets/tools/wrapper.png',      // 포장대
+    mix: '/assets/tools/bowl.png',            // 믹싱볼
   };
 
   // --- [범례 데이터] ---
@@ -66,6 +68,7 @@ const GameCanvas = ({ selectedChar, isPlaying, onBurgerDelivered, score, isMulti
     { name: '볶은 카다이프', color: '#CD853F' },
     { name: '화이트초콜릿', color: '#FAF0E6' },
     { name: '녹은 화이트초콜릿', color: '#FFFFF0' },
+    { name: '초코+피스타치오 믹스', color: '#9ACD32' },
     { name: '버터', color: '#F0E68C' },
     { name: '마시멜로', color: '#FFFAFA' },
     { name: '녹은 마시멜로', color: '#EEE' },
@@ -125,7 +128,7 @@ const GameCanvas = ({ selectedChar, isPlaying, onBurgerDelivered, score, isMulti
         peeledPistachio: '#90EE90', pistachioSpread: '#228B22', meltedWhiteChoco: '#FFFFF0',
         filling: '#ADFF2F', hardFilling: '#32CD32',
         meltedMarshmallow: '#EEE', dough: '#D2691E', panWithDough: '#C0C0C0',
-        finalCookie: '#A0522D', packagedCookie: '#FF1493'
+        finalCookie: '#A0522D', packagedCookie: '#FF1493', whiteChoco_pistachio: '#9ACD32',
     };
     return map[name] || '#FFF';
   }
@@ -139,7 +142,7 @@ const GameCanvas = ({ selectedChar, isPlaying, onBurgerDelivered, score, isMulti
         peeledPistachio: '깐 피스타치오', pistachioSpread: '피스타치오 스프레드', meltedWhiteChoco: '녹은 화이트초콜릿',
         filling: '속', hardFilling: '굳은 속',
         meltedMarshmallow: '녹은 마시멜로', dough: '피', panWithDough: '피든 후라이팬',
-        finalCookie: '두쫀쿠', packagedCookie: '포장된 두쫀쿠'
+        finalCookie: '두쫀쿠', packagedCookie: '포장된 두쫀쿠', whiteChoco_pistachio: '초코+피스타치오',
     };
     return map[id] || id;
   }
@@ -634,7 +637,13 @@ const GameCanvas = ({ selectedChar, isPlaying, onBurgerDelivered, score, isMulti
       }
       const mixZone = ZONES.find(z => z.func === 'mix');
       if (mixZone) {
-          checkRecipe(mixZone, cookedItems, 'filling', ['meltedWhiteChoco', 'pistachioSpread', 'toastedKadaif']); // 볶은 카다이프 사용
+          // ✅ [신규 1단계] 녹은 초콜릿 + 피스타치오 스프레드 = 초코피스타치오 믹스
+          checkRecipe(mixZone, cookedItems, 'whiteChoco_pistachio', ['meltedWhiteChoco', 'pistachioSpread']);
+
+          // ✅ [신규 2단계] 초코피스타치오 믹스 + 볶은 카다이프 = 속(filling) 완성
+          checkRecipe(mixZone, cookedItems, 'filling', ['whiteChoco_pistachio', 'toastedKadaif']);
+
+          // (도우 만드는 레시피는 그대로 유지)
           checkRecipe(mixZone, cookedItems, 'dough', ['meltedMarshmallow', 'milkPowder', 'cocoa']);
       }
       const spreadZone = ZONES.find(z => z.func === 'spread');
@@ -893,18 +902,18 @@ const GameCanvas = ({ selectedChar, isPlaying, onBurgerDelivered, score, isMulti
                 const centerOffset = (PLAYER_SIZE - ITEM_SIZE) / 2;
                 if (holder.direction === 'up') { 
                   item.x = holder.x + centerOffset; 
-                  item.y = holder.y - ITEM_SIZE - 5; 
+                  item.y = holder.y - ITEM_SIZE - 20; 
                 }
                 else if (holder.direction === 'down') { 
                   item.x = holder.x + centerOffset; 
-                  item.y = holder.y + PLAYER_SIZE + 5; 
+                  item.y = holder.y + PLAYER_SIZE + 20; 
                 }
                 else if (holder.direction === 'left') { 
-                  item.x = holder.x - ITEM_SIZE - 5; 
+                  item.x = holder.x - ITEM_SIZE - 20; 
                   item.y = holder.y + centerOffset; 
                 }
                 else if (holder.direction === 'right') { 
-                  item.x = holder.x + PLAYER_SIZE + 5; 
+                  item.x = holder.x + PLAYER_SIZE + 20; 
                   item.y = holder.y + centerOffset; 
                 }
              }
@@ -992,18 +1001,18 @@ const GameCanvas = ({ selectedChar, isPlaying, onBurgerDelivered, score, isMulti
               const centerOffset = (PLAYER_SIZE - ITEM_SIZE) / 2;
               if (player.direction === 'up') { 
                 target.x = player.x + centerOffset; 
-                target.y = player.y - ITEM_SIZE - 5; 
+                target.y = player.y - ITEM_SIZE + 20; 
               }
               else if (player.direction === 'down') { 
                 target.x = player.x + centerOffset; 
-                target.y = player.y + PLAYER_SIZE + 5; 
+                target.y = player.y + PLAYER_SIZE - 20; 
               }
               else if (player.direction === 'left') { 
-                target.x = player.x - ITEM_SIZE - 5; 
+                target.x = player.x - ITEM_SIZE + 20; 
                 target.y = player.y + centerOffset; 
               }
               else if (player.direction === 'right') { 
-                target.x = player.x + PLAYER_SIZE + 5; 
+                target.x = player.x + PLAYER_SIZE - 20; 
                 target.y = player.y + centerOffset; 
               }
           }
@@ -1031,7 +1040,6 @@ const GameCanvas = ({ selectedChar, isPlaying, onBurgerDelivered, score, isMulti
       ZONES.forEach(zone => {
         // 먼저 배경색 그리기
         ctx.fillStyle = zone.type === 'exit' ? '#666' : (zone.type === 'wall' ? '#FFDAB9' : '#E8B878');
-        if (zone.func === 'package') ctx.fillStyle = '#FF69B4'; // 포장 구역 색
         ctx.fillRect(zone.px, zone.py, zone.pw, zone.ph);
         
         // 재료 칸이면 재료 이미지 표시
@@ -1092,6 +1100,8 @@ const GameCanvas = ({ selectedChar, isPlaying, onBurgerDelivered, score, isMulti
             else if (zone.func === 'fire') scale = 1.5; // 화구는 1.5배
             else if (zone.func === 'peel') scale = 1.5; // 트레이는 1.5배
             else if (zone.func === 'blend') scale = 2.3; // 믹서기는 상태 관계없이 2.3배
+            else if (zone.func === 'package') scale = 1.0; // 칸에 딱 맞게! (원하면 1.1 등 조절)
+            else if (zone.func === 'mix') scale = 1.2;
             const imgRatio = toolImg.width / toolImg.height;
             const zoneRatio = zone.pw / zone.ph;
             
