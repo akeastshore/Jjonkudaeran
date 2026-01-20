@@ -6,6 +6,7 @@ import MultiLobby from './MultiLobby';
 // import { io } from "socket.io-client"; // ★ 삭제 (Context가 대신함)
 import { useGameContext } from './context/GameContext'; // ★ 추가
 import loginBg from './assets/backgrounds/login_bg.png'; // 경로가 맞는지 꼭 확인하세요!
+import choiceBg from './assets/backgrounds/choice_bg.png';
 import backgroundImage from './assets/background.png';
 import buttonGreen from './assets/button/green.png';
 import buttonOrange from './assets/button/orange.png';
@@ -769,12 +770,36 @@ function App() {
 
       case 'single': 
         return ( 
-          <div className="char-select-screen">
-            <h2>캐릭터 선택</h2>
+          <div className="char-select-screen" style={{
+            backgroundImage: `url(${choiceBg})`,
+            backgroundSize: 'cover',
+            backgroundPosition: 'center bottom',
+            backgroundRepeat: 'no-repeat',
+            width: '100%',
+            height: '100%',
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'flex-start',
+            alignItems: 'flex-start',
+            paddingTop: '150px',
+            paddingLeft: '30px',
+            paddingRight: '350px',
+            paddingBottom: '20px'
+          }}>
             <div className="char-list">
               {characters.map(c => (
                 <div key={c.id} className={`char-card ${selectedChar===c.id?'selected':''}`} onClick={()=>setSelectedChar(c.id)}>
-                  <img src={c.img} className="char-img" alt={c.name}/>
+                  <img 
+                    src={c.img} 
+                    className="char-img" 
+                    alt={c.name}
+                    style={{
+                      transform: c.id === 2 ? 'scale(0.85)' : c.id === 3 ? 'translateY(20px)' : 'none'
+                    }}
+                  />
                   <div>{c.name}</div>
                 </div>
               ))}
