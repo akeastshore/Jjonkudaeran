@@ -225,12 +225,23 @@ export const createDrawFunction = (
 
     // 플레이어
     const player = playerRef.current;
-    const charDirection = player.direction || 'down';
+    const playerDirection = player.direction || 'down';
+    
+    // 방향 매핑: down->front, up->back, left->left, right->right
+    const directionMap = {
+      'down': 'front',
+      'up': 'back',
+      'left': 'left',
+      'right': 'right'
+    };
+    
+    const charDirection = directionMap[playerDirection] || 'front';
     const charImg = imagesRef.current[`playerChar_${charDirection}`];
     
     if (charImg && charImg.complete && charImg.naturalHeight !== 0) {
       ctx.drawImage(charImg, player.x, player.y, player.w, player.h);
     } else {
+      // 이미지가 로드되지 않았을 때 기본 사각형
       ctx.fillStyle = player.color;
       ctx.fillRect(player.x, player.y, player.w, player.h);
     }
