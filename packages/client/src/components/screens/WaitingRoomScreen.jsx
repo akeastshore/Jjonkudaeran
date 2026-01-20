@@ -1,52 +1,65 @@
+import React from 'react';
+import { Button, PlayerListItem } from '../ui';
+
 // 대기실 화면
-const WaitingRoomScreen = ({ roomId, waitingInfo }) => {
+const WaitingRoomScreen = ({ roomId, waitingInfo, socket, username }) => {
+  // 방장은 members 배열의 첫 번째 사람
+  const isHost = waitingInfo.members.length > 0 && waitingInfo.members[0] === username;
+  const isFull = waitingInfo.current === waitingInfo.max;
+
+  const handleStartPreparation = () => {
+    if (socket && isFull) {
+      socket.emit('startPreparation');
+    }
+  };
+
   return (
-    <div className="game-screen">
-      <h1>⏳ 대기실</h1>
-      <div style={{ 
-        background: '#222', 
-        padding: '40px', 
-        borderRadius: '20px', 
-        border: '2px solid #555' 
-      }}>
-        <h2 style={{ 
-          color: '#FFD700', 
-          fontSize: '3rem', 
-          letterSpacing: '5px' 
-        }}>
-          {roomId}
-        </h2>
-        <p style={{ color: '#aaa' }}>친구에게 위 코드를 알려주세요!</p>
+    <div className="waiting-page">
+      <div className="waiting-wrap">
+        <h1 className="waiting-title">⏳ 대기실</h1>
+        
+        <div className="waiting-panel">
+          <div className="room-code">{roomId}</div>
+          <p className="room-hint">친구에게 위 코드를 알려주세요!</p>
 
-        <hr style={{ borderColor: '#444', margin: '20px 0' }} />
+          <div className="waiting-divider"></div>
 
-        <div style={{ fontSize: '1.5rem', marginBottom: '20px' }}>
-          현재 인원: <b style={{ color: '#4CAF50' }}>{waitingInfo.current}</b> / {waitingInfo.max}
-        </div>
-
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-          {waitingInfo.members.map((mem, idx) => (
-            <div 
-              key={idx} 
-              style={{ 
-                background: '#444', 
-                padding: '10px', 
-                borderRadius: '5px' 
-              }}
-            >
-              👤 {mem} {idx === 0 && '👑(방장)'}
-            </div>
-          ))}
-        </div>
-
-        {waitingInfo.current < waitingInfo.max && (
-          <div 
-            className="loading-dots" 
-            style={{ marginTop: '30px', color: '#888' }}
-          >
-            참가자를 기다리는 중...
+          <div className="room-count">
+            현재 인원: <span className="current">{waitingInfo.current}</span> / <span className="max">{waitingInfo.max}</span>
           </div>
-        )}
+
+          <div className="player-list">
+            {waitingInfo.members.map((mem, idx) => (
+              <PlayerListItem
+                key={idx}
+                playerName={`👤 ${mem}`}
+                isHost={idx === 0}
+              />
+            ))}
+          </div>
+
+          {isFull && isHost && (
+            <Button
+              variant="start-game"
+              onClick={handleStartPreparation}
+              style={{ marginTop: '14px' }}
+            >
+              🎮 게임 시작!
+            </Button>
+          )}
+
+          {!isFull && (
+            <div className="waiting-status">
+              참가자를 기다리는 중...
+            </div>
+          )}
+
+          {isFull && !isHost && (
+            <div className="waiting-status">
+              방장이 게임 준비를 시작할 때까지 대기 중...
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

@@ -121,10 +121,48 @@ io.on('connection', (socket) => {
       members: memberNames
     });
 
-    if (room.currentPlayers === room.maxPlayers) {
+    // 모든 플레이어가 모여도 자동으로 넘어가지 않음 (방장이 버튼 눌러야 함)
+  });
+
+  // 방장이 게임 준비 시작 버튼을 눌렀을 때
+  socket.on('startPreparation', () => {
+    const p = players[socket.id];
+    if (p && p.roomId) {
+      const roomId = p.roomId;
+      io.to(roomId).emit('allPlayersJoined');
+      
+      // 2분(120초) 타이머 시작
       setTimeout(() => {
-        io.to(roomId).emit('allPlayersJoined'); 
-      }, 1000);
+        const room = rooms[roomId];
+        if (!room || room.isPlaying) return; // 이미 게임이 시작되었으면 무시
+        
+        console.log(`⏰ 방 ${roomId} 시간 종료! 자동으로 게임을 시작합니다.`);
+        
+        // 모든 플레이어에 대해
+        const roomSockets = io.sockets.adapter.rooms.get(roomId);
+        if (roomSockets) {
+          roomSockets.forEach(id => {
+            const player = players[id];
+            if (player) {
+              // 캐릭터를 선택하지 않았으면 1번 캐릭터로 자동 선택
+              if (!player.charId) {
+                player.charId = 1;
+              }
+              // 모두 준비 완료 상태로 만들기
+              player.isReady = true;
+            }
+          });
+          
+          // 방 상태 업데이트 전송
+          broadcastRoomUpdate(roomId);
+          
+          // 0.5초 후 게임 시작
+          setTimeout(() => {
+            room.isPlaying = true;
+            io.to(roomId).emit('gameStart');
+          }, 500);
+        }
+      }, 120000); // 120초 = 2분
     }
   });
 
@@ -179,17 +217,17 @@ io.on('connection', (socket) => {
     if (p && p.charId) {
       p.isReady = !p.isReady;
       broadcastRoomUpdate(p.roomId);
+      // 자동 시작 제거 - 방장이 게임 시작 버튼을 눌러야 함
+    }
+  });
 
+  // 방장이 게임 시작 버튼을 눌렀을 때
+  socket.on('startGame', () => {
+    const p = players[socket.id];
+    if (p && p.roomId) {
       const roomId = p.roomId;
-      const roomSockets = io.sockets.adapter.rooms.get(roomId);
-      if (roomSockets) {
-        const ids = Array.from(roomSockets);
-        // 전원 준비 완료 시
-        if (ids.every(id => players[id] && players[id].isReady)) {
-           rooms[roomId].isPlaying = true;
-           io.to(roomId).emit('gameStart');
-        }
-      }
+      rooms[roomId].isPlaying = true;
+      io.to(roomId).emit('gameStart');
     }
   });
 
