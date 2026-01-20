@@ -9,6 +9,7 @@ export const createGameLogicUpdate = (
   keysRef,
   fireRef,
   blenderRef,
+  trayStatesRef,
   getBurnerState,
   checkRecipe,
   ZONES,
@@ -23,7 +24,7 @@ export const createGameLogicUpdate = (
     const cookedItems = cookedItemsRef.current;
     const isSpacePressed = keysRef.current[' '] || keysRef.current['Space'];
     const now = Date.now();
-    
+
     const interactRect = { x: player.x - 10, y: player.y - 10, w: player.w + 20, h: player.h + 20 };
     const nearbyZone = ZONES.find(zone => isRectIntersect(interactRect, zone));
 
@@ -34,6 +35,14 @@ export const createGameLogicUpdate = (
     };
 
     // --- Fire Logic ---
+    const getTrayState = (zone) => {
+      const key = `${zone.x}_${zone.y}`;
+      if (!trayStatesRef.current[key]) {
+        trayStatesRef.current[key] = { state: 'empty' };
+      }
+      return trayStatesRef.current[key];
+    };
+
     const fire = fireRef.current;
     const { zone: facingZone } = getFacingInfo(player, ZONES);
     const isFacingFire = facingZone && facingZone.func === 'fire';
@@ -87,16 +96,16 @@ export const createGameLogicUpdate = (
         item.name = getNameForIngredient(item.nextId);
         item.color = getColorForIngredient(item.nextId);
         item.holderId = null;
-        
-        const currentZone = ZONES.find(z => isRectIntersect({x:item.x, y:item.y, w:item.w, h:item.h}, z));
-        
+
+        const currentZone = ZONES.find(z => isRectIntersect({ x: item.x, y: item.y, w: item.w, h: item.h }, z));
+
         if (currentZone && (currentZone.func === 'microwave' || currentZone.func === 'fridge' ||
-            currentZone.func === 'blend' || currentZone.func === 'peel' || currentZone.func === 'fire')) {
+          currentZone.func === 'blend' || currentZone.func === 'peel' || currentZone.func === 'fire')) {
           placeItemInFrontOfZone(item, currentZone);
         } else if (currentZone) {
           centerItemInZone(item, currentZone);
         }
-        
+
         broadcastItem(item);
       }
     });
@@ -113,8 +122,12 @@ export const createGameLogicUpdate = (
       const burner = getBurnerState(zone);
       if (burner.state === 'marshmallow_processing' && now >= burner.finishTime) {
         burner.state = 'marshmallow_ready';
+      } else if (burner.state === 'butter_processing' && now >= burner.finishTime) {
+        burner.state = 'butter_ready';
       } else if (burner.state === 'final_processing' && now >= burner.finishTime) {
         burner.state = 'final_ready';
+      } else if (burner.state === 'kadaif_processing' && now >= burner.finishTime) {
+        burner.state = 'kadaif_ready';
       }
     });
 
@@ -126,24 +139,22 @@ export const createGameLogicUpdate = (
         checkRecipe(zone, cookedItems, 'toastedKadaif', ['kadaif_v1', 'butter_v2']);
       });
     }
-    
+
     const mixZone = ZONES.find(z => z.func === 'mix');
     if (mixZone) {
       checkRecipe(mixZone, cookedItems, 'whiteChoco_pistachio', ['meltedWhiteChoco', 'pistachioSpread']);
-      checkRecipe(mixZone, cookedItems, 'filling', ['whiteChoco_pistachio', 'toastedKadaif']);
-      checkRecipe(mixZone, cookedItems, 'dough', ['meltedMarshmallow', 'milkPowder', 'cocoa']);
+      checkRecipe(mixZone, cookedItems, 'innerpart', ['whiteChoco_pistachio', 'toastedKadaif']);
+      checkRecipe(mixZone, cookedItems, 'innerpart', ['whiteChoco_pistachio', 'toastedKadaif']);
+      checkRecipe(mixZone, cookedItems, 'innerpart', ['meltedWhiteChoco', 'pistachioSpread', 'toastedKadaif']);
     }
-    
-    const spreadZone = ZONES.find(z => z.func === 'spread');
-    if (spreadZone) {
-      checkRecipe(spreadZone, cookedItems, 'finalCookie', ['dough', 'hardFilling', 'cocoa']);
-    }
+
+
 
     // Drop
     if (player.holding && !isSpacePressed) {
       const heldUid = player.holding;
       let droppedItem = cookedItems.find(i => i.uid === heldUid);
-      
+
       if (droppedItem) {
         const { zone: facingZone, x: facingX, y: facingY } = getFacingInfo(player, ZONES, true);
 
@@ -159,8 +170,62 @@ export const createGameLogicUpdate = (
               centerItemInZone(droppedItem, facingZone);
             };
 
-            if (facingZone.func === 'peel' && droppedItem.id === 'pistachio') {
-              setProcessing('peeledPistachio', 1000);
+            if (facingZone.func === 'tray') {
+              const tray = getTrayState(facingZone);
+
+              if (droppedItem.id === 'pistachio') {
+                setProcessing('peeledPistachio', 1000);
+              } else if (droppedItem.id === 'dough' && tray.state === 'empty') {
+                tray.state = 'dough';
+                cookedItemsRef.current = cookedItemsRef.current.filter(item => item.uid !== droppedItem.uid);
+                player.holding = null;
+                if (isMultiplayer && socketRef.current) socketRef.current.emit('removeItem', droppedItem.uid);
+                return;
+              } else if ((droppedItem.id === 'cocoa' || droppedItem.id === 'cocoa_v2') && tray.state === 'empty') {
+                tray.state = 'cocoa';
+                cookedItemsRef.current = cookedItemsRef.current.filter(item => item.uid !== droppedItem.uid);
+                player.holding = null;
+                if (isMultiplayer && socketRef.current) socketRef.current.emit('removeItem', droppedItem.uid);
+                return;
+              } else if (droppedItem.id === 'frozenInnerpart' && tray.state === 'dough') {
+                const newItem = {
+                  id: 'dujjonku',
+                  uid: `dujjonku_${now}_${Math.random()}`,
+                  x: 0, y: 0, w: ITEM_SIZE, h: ITEM_SIZE,
+                  color: getColorForIngredient('dujjonku'),
+                  name: getNameForIngredient('dujjonku'),
+                  status: 'ground'
+                };
+                centerItemInZone(newItem, facingZone);
+                cookedItems.push(newItem);
+                cookedItemsRef.current = cookedItemsRef.current.filter(item => item.uid !== droppedItem.uid);
+                if (isMultiplayer && socketRef.current) {
+                  socketRef.current.emit('updateItemState', newItem);
+                  socketRef.current.emit('removeItem', droppedItem.uid);
+                }
+                tray.state = 'empty';
+                player.holding = null;
+                return;
+              } else if (droppedItem.id === 'dujjonku' && tray.state === 'cocoa') {
+                const newItem = {
+                  id: 'finalCookie',
+                  uid: `finalCookie_${now}_${Math.random()}`,
+                  x: 0, y: 0, w: ITEM_SIZE, h: ITEM_SIZE,
+                  color: getColorForIngredient('finalCookie'),
+                  name: getNameForIngredient('finalCookie'),
+                  status: 'ground'
+                };
+                centerItemInZone(newItem, facingZone);
+                cookedItems.push(newItem);
+                cookedItemsRef.current = cookedItemsRef.current.filter(item => item.uid !== droppedItem.uid);
+                if (isMultiplayer && socketRef.current) {
+                  socketRef.current.emit('updateItemState', newItem);
+                  socketRef.current.emit('removeItem', droppedItem.uid);
+                }
+                tray.state = 'empty';
+                player.holding = null;
+                return;
+              }
             } else if (facingZone.func === 'blend' && droppedItem.id === 'peeledPistachio') {
               blenderRef.current.state = 'processing';
               blenderRef.current.finishTime = now + 2000;
@@ -169,16 +234,35 @@ export const createGameLogicUpdate = (
               return;
             } else if (facingZone.func === 'microwave' && droppedItem.id === 'whiteChoco') {
               setProcessing('meltedWhiteChoco', 2000);
-            } else if (facingZone.func === 'fridge' && droppedItem.id === 'filling') {
-              setProcessing('hardFilling', 5000);
-            } else if (facingZone.func === 'fire' && (droppedItem.id === 'marshmallow' || droppedItem.id === 'milkPowder_v2' || droppedItem.id === 'cocoa_v2')) {
+            } else if (facingZone.func === 'fridge' && droppedItem.id === 'innerpart') {
+              setProcessing('frozenInnerpart', 5000);
+
+            } else if (facingZone.func === 'fire' && (droppedItem.id === 'butter_v2' || droppedItem.id === 'marshmallow' || droppedItem.id === 'milkPowder_v2' || droppedItem.id === 'cocoa_v2' || droppedItem.id === 'kadaif_v1')) {
               const burner = getBurnerState(facingZone);
-              
-              if (droppedItem.id === 'marshmallow') {
+
+              if (droppedItem.id === 'butter_v2') {
                 if (burner.state === 'empty') {
-                  burner.state = 'marshmallow_processing';
+                  burner.state = 'butter_processing';
                   burner.finishTime = now + 1000;
-                  burner.items = ['marshmallow'];
+                  burner.items = ['butter_v2'];
+                  cookedItemsRef.current = cookedItemsRef.current.filter(item => item.uid !== droppedItem.uid);
+                  player.holding = null;
+                  return;
+                }
+              } else if (droppedItem.id === 'marshmallow') {
+                if (burner.state === 'butter_ready') {
+                  burner.state = 'marshmallow_processing';
+                  burner.finishTime = now + 2000;
+                  burner.items.push('marshmallow');
+                  cookedItemsRef.current = cookedItemsRef.current.filter(item => item.uid !== droppedItem.uid);
+                  player.holding = null;
+                  return;
+                }
+              } else if (droppedItem.id === 'kadaif_v1') {
+                if (burner.state === 'empty') {
+                  burner.state = 'kadaif_processing';
+                  burner.finishTime = now + 3000;
+                  burner.items = ['kadaif_v1'];
                   cookedItemsRef.current = cookedItemsRef.current.filter(item => item.uid !== droppedItem.uid);
                   player.holding = null;
                   return;
@@ -188,7 +272,7 @@ export const createGameLogicUpdate = (
                   burner.items.push(droppedItem.id);
                   cookedItemsRef.current = cookedItemsRef.current.filter(item => item.uid !== droppedItem.uid);
                   player.holding = null;
-                  
+
                   if (burner.items.includes('milkPowder_v2') && burner.items.includes('cocoa_v2')) {
                     burner.state = 'final_processing';
                     burner.finishTime = now + 1000;
@@ -218,8 +302,8 @@ export const createGameLogicUpdate = (
 
     // Pickup
     if (!player.holding && isSpacePressed) {
-      const { zone: facingZone } = getFacingInfo(player, ZONES, true);
-      
+      const { zone: facingZone, x: facingX, y: facingY } = getFacingInfo(player, ZONES, true);
+
       if (facingZone && facingZone.func === 'blend' && blenderRef.current.state === 'ready') {
         const newUid = `pistachioSpread_${now}_${Math.random()}`;
         const newItem = {
@@ -241,16 +325,35 @@ export const createGameLogicUpdate = (
       } else if (facingZone && facingZone.func === 'fire') {
         const burner = getBurnerState(facingZone);
         if (burner.state === 'final_ready') {
-          const newUid = `panWithDough_${now}_${Math.random()}`;
+          const newUid = `dough_${now}_${Math.random()}`;
           const newItem = {
-            id: 'panWithDough',
+            id: 'dough',
             uid: newUid,
             x: player.x,
             y: player.y,
             w: ITEM_SIZE,
             h: ITEM_SIZE,
-            color: getColorForIngredient('panWithDough'),
-            name: getNameForIngredient('panWithDough'),
+            color: getColorForIngredient('dough'),
+            name: getNameForIngredient('dough'),
+            status: 'held',
+            holderId: socketRef.current?.id
+          };
+          cookedItemsRef.current.push(newItem);
+          player.holding = newUid;
+          burner.state = 'empty';
+          burner.items = [];
+          broadcastItem(newItem);
+        } else if (burner.state === 'kadaif_ready') {
+          const newUid = `toastedKadaif_${now}_${Math.random()}`;
+          const newItem = {
+            id: 'toastedKadaif',
+            uid: newUid,
+            x: player.x,
+            y: player.y,
+            w: ITEM_SIZE,
+            h: ITEM_SIZE,
+            color: getColorForIngredient('toastedKadaif'),
+            name: getNameForIngredient('toastedKadaif'),
             status: 'held',
             holderId: socketRef.current?.id
           };
@@ -262,12 +365,12 @@ export const createGameLogicUpdate = (
         }
       } else {
         const pickupRange = {
-          x: player.x - GRID_SIZE,
-          y: player.y - GRID_SIZE,
-          w: player.w + GRID_SIZE * 2,
-          h: player.h + GRID_SIZE * 2
+          x: facingX,
+          y: facingY,
+          w: GRID_SIZE,
+          h: GRID_SIZE
         };
-        
+
         const target = cookedItems
           .filter(i => i.status === 'ground' || i.status === 'cooking')
           .find(i => isRectIntersect(pickupRange, i));
@@ -282,7 +385,7 @@ export const createGameLogicUpdate = (
           if (baseItem.status === 'spawn') {
             const newUid = `${baseItem.id}_${now}_${Math.random()}`;
             const newItem = { ...baseItem, uid: newUid, x: player.x, y: player.y, status: 'held', holderId: socketRef.current?.id };
-            
+
             // 재료 변환 로직
             if (newItem.id === 'kadaif') {
               newItem.id = 'kadaif_v1';
@@ -304,7 +407,7 @@ export const createGameLogicUpdate = (
               newItem.color = getColorForIngredient('cocoa_v2');
               newItem.name = getNameForIngredient('cocoa_v2');
             }
-            
+
             cookedItems.push(newItem);
             player.holding = newUid;
             broadcastItem(newItem);
@@ -312,13 +415,13 @@ export const createGameLogicUpdate = (
         }
       }
     }
-    
+
     // Exit delivery
     const heldItem = cookedItems.find(i => i.uid === player.holding);
     if (heldItem && isSpacePressed && nearbyZone && nearbyZone.type === 'exit') {
       if (heldItem.id === 'packagedCookie') {
         onBurgerDelivered();
-        
+
         const idx = cookedItems.indexOf(heldItem);
         if (idx > -1) cookedItems.splice(idx, 1);
         player.holding = null;

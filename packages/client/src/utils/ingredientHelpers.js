@@ -24,6 +24,10 @@ export function getColorForIngredient(name) {
     finalCookie: '#A0522D',
     packagedCookie: '#FF1493',
     whiteChoco_pistachio: '#9ACD32',
+    innerpart: '#ADFF2F',
+    innerpart: '#ADFF2F',
+    frozenInnerpart: '#32CD32',
+    innerpart_spreaded: '#98FB98',
   };
   return map[name] || '#FFF';
 }
@@ -54,6 +58,9 @@ export function getNameForIngredient(id) {
     finalCookie: '두쫀쿠',
     packagedCookie: '포장된 두쫀쿠',
     whiteChoco_pistachio: '초코+피스타치오',
+    innerpart: '속(innerpart)',
+    frozenInnerpart: '얼린 속(frozen_innerpart)',
+    innerpart_spreaded: '펴진 속(innerpart_spreaded)',
   };
   return map[id] || id;
 }

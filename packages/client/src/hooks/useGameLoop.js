@@ -27,6 +27,7 @@ export const useGameLoop = ({
   cookedItemsRef,
   fireRef,
   blenderRef,
+  trayStatesRef,
   burnerStatesRef,
   INITIAL_INGREDIENTS,
   ZONES,
@@ -40,24 +41,24 @@ export const useGameLoop = ({
     const ctx = canvas.getContext('2d', { alpha: false });
     canvas.width = MAP_WIDTH;
     canvas.height = MAP_HEIGHT;
-    
+
     ctx.imageSmoothingEnabled = true;
     ctx.imageSmoothingQuality = 'high';
 
     // 게임이 시작되지 않았을 때 초기화
     if (!isPlaying) {
       itemsRef.current = JSON.parse(JSON.stringify(INITIAL_INGREDIENTS));
-      cookedItemsRef.current = []; 
+      cookedItemsRef.current = [];
       playerRef.current.holding = null;
-      fireRef.current = { 
-        isOn: false, 
-        isFacing: false, 
-        facingStartTime: 0 
+      fireRef.current = {
+        isOn: false,
+        isFacing: false,
+        facingStartTime: 0
       };
-      
+
       let startX = MAP_WIDTH / 2 - PLAYER_SIZE / 2;
       let startY = MAP_HEIGHT / 2;
-      playerRef.current.x = Math.floor(startX / GRID_SIZE) * GRID_SIZE; 
+      playerRef.current.x = Math.floor(startX / GRID_SIZE) * GRID_SIZE;
       playerRef.current.y = Math.floor(startY / GRID_SIZE) * GRID_SIZE;
     }
 
@@ -73,6 +74,7 @@ export const useGameLoop = ({
       keysRef,
       fireRef,
       blenderRef,
+      trayStatesRef,
       getBurnerState,
       checkRecipe,
       ZONES,
@@ -93,6 +95,7 @@ export const useGameLoop = ({
       cookedItemsRef,
       fireRef,
       blenderRef,
+      trayStatesRef,
       getBurnerState
     );
 
@@ -114,27 +117,28 @@ export const useGameLoop = ({
     };
 
     gameLoop();
-    
+
     return () => {
       cancelAnimationFrame(animationFrameId);
     };
   }, [
-    isPlaying, 
-    onBurgerDelivered, 
-    score, 
-    isMultiplayer, 
-    canvasRef, 
-    imagesRef, 
-    socketRef, 
-    otherPlayersRef, 
-    keysRef, 
-    playerRef, 
-    itemsRef, 
-    cookedItemsRef, 
-    fireRef, 
-    blenderRef, 
-    burnerStatesRef, 
-    INITIAL_INGREDIENTS, 
+    isPlaying,
+    onBurgerDelivered,
+    score,
+    isMultiplayer,
+    canvasRef,
+    imagesRef,
+    socketRef,
+    otherPlayersRef,
+    keysRef,
+    playerRef,
+    itemsRef,
+    cookedItemsRef,
+    fireRef,
+    blenderRef,
+    trayStatesRef,
+    burnerStatesRef,
+    INITIAL_INGREDIENTS,
     ZONES
   ]);
 };

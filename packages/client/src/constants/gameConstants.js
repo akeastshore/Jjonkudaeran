@@ -2,8 +2,8 @@
 export const GRID_SIZE = 40;
 export const MAP_WIDTH = 800;
 export const MAP_HEIGHT = 600;
-export const PLAYER_SIZE = 60;
-export const ITEM_SIZE = 90;
+export const PLAYER_SIZE = 80;
+export const ITEM_SIZE = 100;
 export const MOVE_DELAY = 70;
 
 // 재료 이미지 경로 매핑
@@ -17,6 +17,9 @@ export const INGREDIENT_IMAGES = {
   whiteChoco: '/assets/ingredients/white_chocolate.png',
   meltedWhiteChoco: '/assets/ingredients/white_chocolate_melted.png',
   whiteChoco_pistachio: '/assets/ingredients/whitechocolate_pistachiospread.png',
+  innerpart: '/assets/ingredients/innerpart.png',
+  frozenInnerpart: '/assets/ingredients/frozen_innerpart.png',
+  innerpart_spreaded: '/assets/ingredients/innerpart_spreaded.png',
   butter: '/assets/ingredients/butter.png',
   butter_v2: '/assets/ingredients/butter_v2.png',
   marshmallow: '/assets/ingredients/marshmallow.png',
@@ -27,10 +30,10 @@ export const INGREDIENT_IMAGES = {
   cocoa_v2: '/assets/ingredients/cocoa_powder_v2.png',
   filling: '/assets/ingredients/pistachio_spread.png',
   hardFilling: '/assets/ingredients/pistachio_spread.png',
-  dough: '/assets/ingredients/dujjonku.png',
+  dough: '/assets/ingredients/dough.png',
   panWithDough: '/assets/tools/burner_final.png',
-  finalCookie: '/assets/ingredients/dujjonku_fianl.png',
-  packagedCookie: '/assets/ingredients/dujjonku_fianl.png',
+  finalCookie: '/assets/ingredients/dujjonku_final.png',
+  packagedCookie: '/assets/ingredients/wrapped_dujjonku.png',
 };
 
 // 도구 이미지 경로 매핑
@@ -42,6 +45,9 @@ export const TOOL_IMAGES = {
   peel: '/assets/tools/tray.png',
   package: '/assets/tools/wrapper.png',
   mix: '/assets/tools/bowl.png',
+  spread: '/assets/tools/tray.png',
+  cool: '/assets/tools/tray.png',
+  tray: '/assets/tools/tray.png',
 };
 
 // 범례 데이터
@@ -69,12 +75,13 @@ export const INGREDIENT_LEGEND = [
 // 맵 레이아웃
 export const LAYOUT = [
   // [상단]
-  { x: 3, y: 0, w: 2, h: 2, label: '', type: 'station', func: 'peel' },
+  { x: 3, y: 0, w: 2, h: 2, label: '', type: 'station', func: 'tray' },
   { x: 5, y: 0, w: 2, h: 2, label: '', type: 'station', func: 'counter' },
   { x: 7, y: 0, w: 2, h: 2, label: '', type: 'station', func: 'blend' },
   { x: 9, y: 0, w: 2, h: 2, label: '', type: 'exit' },
-  { x: 11, y: 0, w: 2, h: 2, label: '', type: 'station', func: 'spread' },
-  { x: 13, y: 0, w: 2, h: 2, label: '', type: 'station', func: 'package' },
+  { x: 11, y: 0, w: 2, h: 2, label: '', type: 'station', func: 'tray' },
+  { x: 13, y: 0, w: 2, h: 2, label: '', type: 'station', func: 'tray' },
+  { x: 15, y: 0, w: 2, h: 2, label: '', type: 'station', func: 'package' },
 
   // [왼쪽 재료]
   { x: 0, y: 3, w: 2, h: 2, label: '', type: 'station', ingredient: 'pistachio' },
