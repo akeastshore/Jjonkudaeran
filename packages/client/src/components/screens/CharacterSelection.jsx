@@ -17,12 +17,17 @@ const CharacterSelection = ({ selectedChar, setSelectedChar, setScreen, handleSt
       left: 0,
       display: 'flex',
       flexDirection: 'column',
-      justifyContent: 'flex-start',
+      justifyContent: 'center',
       alignItems: 'center',
-      paddingTop: '80px',
-      paddingBottom: '20px'
+      paddingTop: '0',
+      paddingBottom: '0'
     }}>
-      <h1 className="mp-title" style={{ marginBottom: '40px', textShadow: 'none' }}>캐릭터 선택</h1>
+      <h1 className="mp-title" style={{
+        marginBottom: '40px',
+        color: '#FFFFFF',
+        fontSize: '48px',
+        textShadow: '0 4px 12px rgba(0,0,0,0.6)'
+      }}>캐릭터 선택</h1>
       <div className="char-list">
         {CHARACTERS.map(c => (
           <div
@@ -34,19 +39,31 @@ const CharacterSelection = ({ selectedChar, setSelectedChar, setScreen, handleSt
               src={c.img}
               className="char-img"
               alt={c.name}
-              style={{
-                transform: c.id === 2 ? 'scale(0.85)' : c.id === 3 ? 'translateY(20px)' : 'none'
-              }}
             />
             <div style={{ fontWeight: 'bold' }}>{c.name}</div>
           </div>
         ))}
       </div>
-      <div className="action-buttons">
-        <Button variant="char-action" onClick={() => setScreen('home')}>
+      <div className="action-buttons" style={{
+        width: '100%',
+        maxWidth: '1400px',
+        justifyContent: 'space-between',
+        padding: '0',
+        marginTop: '30px',
+        transform: 'translateY(-30px)'
+      }}>
+        <Button
+          variant="char-action"
+          onClick={() => setScreen('home')}
+          style={{ width: '38%', height: '64px', fontSize: '24px' }}
+        >
           뒤로가기
         </Button>
-        <Button variant="char-action" onClick={handleStartGame}>
+        <Button
+          variant="char-action"
+          onClick={handleStartGame}
+          style={{ width: '38%', height: '64px', fontSize: '24px' }}
+        >
           게임 시작
         </Button>
       </div>

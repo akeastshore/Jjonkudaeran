@@ -34,7 +34,7 @@ export const createGameLogicUpdate = (
       }
     };
 
-    // --- Fire Logic ---
+    // --- Fire Logic (Tray State) ---
     const getTrayState = (zone) => {
       const key = `${zone.x}_${zone.y}`;
       if (!trayStatesRef.current[key]) {
@@ -47,6 +47,7 @@ export const createGameLogicUpdate = (
     const { zone: facingZone } = getFacingInfo(player, ZONES);
     const isFacingFire = facingZone && facingZone.func === 'fire';
 
+    // 불 켜기/끄기 로직
     if (isFacingFire) {
       if (!fire.isFacing) {
         fire.isFacing = true;
@@ -63,7 +64,6 @@ export const createGameLogicUpdate = (
       } else {
         if (!fire.isOn && now - fire.facingStartTime > 2000) {
           fire.isOn = true;
-
           if (isMultiplayer && socketRef.current) {
             socketRef.current.emit('updateFireState', {
               isFacing: true,
@@ -88,7 +88,7 @@ export const createGameLogicUpdate = (
       }
     }
 
-    // Processing
+    // Processing (전자레인지, 믹서기 등 타이머 처리)
     cookedItems.forEach(item => {
       if (item.status === 'processing' && now >= item.finishTime) {
         item.status = 'ground';
@@ -131,9 +131,8 @@ export const createGameLogicUpdate = (
       }
     });
 
-    // Cooking
+    // Cooking (레시피 체크)
     if (fire.isOn) {
-      const fireZones = ZONES.filter(z => z.func === 'fire');
       fireZones.forEach(zone => {
         checkRecipe(zone, cookedItems, 'meltedMarshmallow', ['butter', 'marshmallow']);
         checkRecipe(zone, cookedItems, 'toastedKadaif', ['kadaif_v1', 'butter_v2']);
@@ -148,9 +147,9 @@ export const createGameLogicUpdate = (
       checkRecipe(mixZone, cookedItems, 'innerpart', ['meltedWhiteChoco', 'pistachioSpread', 'toastedKadaif']);
     }
 
-
-
-    // Drop
+    // ----------------------------------------------------------------
+    // Drop (아이템 내려놓기/넣기)
+    // ----------------------------------------------------------------
     if (player.holding && !isSpacePressed) {
       const heldUid = player.holding;
       let droppedItem = cookedItems.find(i => i.uid === heldUid);
@@ -170,6 +169,7 @@ export const createGameLogicUpdate = (
               centerItemInZone(droppedItem, facingZone);
             };
 
+            // 1. 트레이(Tray) 로직
             if (facingZone.func === 'tray') {
               const tray = getTrayState(facingZone);
 
@@ -226,20 +226,46 @@ export const createGameLogicUpdate = (
                 player.holding = null;
                 return;
               }
-            } else if (facingZone.func === 'blend' && droppedItem.id === 'peeledPistachio') {
+            }
+
+            // 2. 믹서기(Blend) 로직
+            else if (facingZone.func === 'blend' && droppedItem.id === 'peeledPistachio') {
               blenderRef.current.state = 'processing';
               blenderRef.current.finishTime = now + 2000;
               cookedItemsRef.current = cookedItemsRef.current.filter(item => item.uid !== droppedItem.uid);
               player.holding = null;
               return;
-            } else if (facingZone.func === 'microwave' && droppedItem.id === 'whiteChoco') {
+            }
+
+            // 3. 믹싱볼(Mix) 로직 [수정됨: 피스타치오 스프레드 넣기]
+            else if (facingZone.func === 'mix' && droppedItem.id === 'pistachioSpread') {
+              const isMixerFull = cookedItemsRef.current.some(item =>
+                item.id === 'pistachioSpread_in_bowl' &&
+                isRectIntersect({ x: item.x, y: item.y, w: item.w, h: item.h }, facingZone)
+              );
+
+              if (!isMixerFull) {
+                droppedItem.id = 'pistachioSpread_in_bowl'; // ID 변경하여 렌더링에서 숨김/교체
+                droppedItem.status = 'placed';
+                centerItemInZone(droppedItem, facingZone);
+                player.holding = null;
+                broadcastItem(droppedItem);
+                return;
+              }
+            }
+
+            // 4. 전자레인지 & 냉장고
+            else if (facingZone.func === 'microwave' && droppedItem.id === 'whiteChoco') {
               setProcessing('meltedWhiteChoco', 2000);
             } else if (facingZone.func === 'fridge' && droppedItem.id === 'innerpart') {
               setProcessing('frozenInnerpart', 5000);
+            }
 
-            } else if (facingZone.func === 'fire' && (droppedItem.id === 'butter_v2' || droppedItem.id === 'marshmallow' || droppedItem.id === 'milkPowder_v2' || droppedItem.id === 'cocoa_v2' || droppedItem.id === 'kadaif_v1')) {
+            // 5. 화덕(Fire) 로직
+            else if (facingZone.func === 'fire') {
               const burner = getBurnerState(facingZone);
 
+              // (1) 버터
               if (droppedItem.id === 'butter_v2') {
                 if (burner.state === 'empty') {
                   burner.state = 'butter_processing';
@@ -249,7 +275,9 @@ export const createGameLogicUpdate = (
                   player.holding = null;
                   return;
                 }
-              } else if (droppedItem.id === 'marshmallow') {
+              }
+              // (2) 마시멜로
+              else if (droppedItem.id === 'marshmallow') {
                 if (burner.state === 'butter_ready') {
                   burner.state = 'marshmallow_processing';
                   burner.finishTime = now + 2000;
@@ -258,16 +286,25 @@ export const createGameLogicUpdate = (
                   player.holding = null;
                   return;
                 }
-              } else if (droppedItem.id === 'kadaif_v1') {
+              }
+              // (3) 카다이프 [수정됨: 넣으면 사라짐]
+              else if (droppedItem.id.includes('kadaif') && !droppedItem.id.includes('toasted')) {
                 if (burner.state === 'empty') {
                   burner.state = 'kadaif_processing';
                   burner.finishTime = now + 3000;
                   burner.items = ['kadaif_v1'];
+                  // 바닥 아이템 삭제
                   cookedItemsRef.current = cookedItemsRef.current.filter(item => item.uid !== droppedItem.uid);
                   player.holding = null;
+                  if (isMultiplayer && socketRef.current) {
+                    socketRef.current.emit('updateBurnerState', { ...burner });
+                    socketRef.current.emit('removeItem', droppedItem.uid);
+                  }
                   return;
                 }
-              } else if (droppedItem.id === 'milkPowder_v2' || droppedItem.id === 'cocoa_v2') {
+              }
+              // (4) 코코아/분유
+              else if (droppedItem.id === 'milkPowder_v2' || droppedItem.id === 'cocoa_v2') {
                 if (burner.state === 'marshmallow_ready' || burner.state === 'mixing') {
                   burner.items.push(droppedItem.id);
                   cookedItemsRef.current = cookedItemsRef.current.filter(item => item.uid !== droppedItem.uid);
@@ -282,7 +319,10 @@ export const createGameLogicUpdate = (
                   return;
                 }
               }
-            } else if (facingZone.func === 'package' && droppedItem.id === 'finalCookie') {
+            }
+
+            // 6. 포장
+            else if (facingZone.func === 'package' && droppedItem.id === 'finalCookie') {
               setProcessing('packagedCookie', 1000);
             } else {
               droppedItem.status = 'cooking';
@@ -300,10 +340,13 @@ export const createGameLogicUpdate = (
       player.holding = null;
     }
 
-    // Pickup
+    // ----------------------------------------------------------------
+    // Pickup (아이템 집기)
+    // ----------------------------------------------------------------
     if (!player.holding && isSpacePressed) {
       const { zone: facingZone, x: facingX, y: facingY } = getFacingInfo(player, ZONES, true);
 
+      // 1. 믹서기에서 꺼내기
       if (facingZone && facingZone.func === 'blend' && blenderRef.current.state === 'ready') {
         const newUid = `pistachioSpread_${now}_${Math.random()}`;
         const newItem = {
@@ -322,7 +365,10 @@ export const createGameLogicUpdate = (
         player.holding = newUid;
         blenderRef.current.state = 'empty';
         broadcastItem(newItem);
-      } else if (facingZone && facingZone.func === 'fire') {
+      }
+
+      // 2. 화덕에서 꺼내기
+      else if (facingZone && facingZone.func === 'fire') {
         const burner = getBurnerState(facingZone);
         if (burner.state === 'final_ready') {
           const newUid = `dough_${now}_${Math.random()}`;
@@ -343,7 +389,9 @@ export const createGameLogicUpdate = (
           burner.state = 'empty';
           burner.items = [];
           broadcastItem(newItem);
-        } else if (burner.state === 'kadaif_ready') {
+        }
+        // [수정됨: 구운 카다이프 꺼내기]
+        else if (burner.state === 'kadaif_ready') {
           const newUid = `toastedKadaif_${now}_${Math.random()}`;
           const newItem = {
             id: 'toastedKadaif',
@@ -359,11 +407,47 @@ export const createGameLogicUpdate = (
           };
           cookedItemsRef.current.push(newItem);
           player.holding = newUid;
-          burner.state = 'empty';
+          burner.state = 'empty'; // 화덕 비우기
           burner.items = [];
           broadcastItem(newItem);
         }
-      } else {
+      }
+
+      // 3. 믹싱볼(Mix)에서 꺼내기 [수정됨]
+      else if (facingZone && facingZone.func === 'mix') {
+        const bowlItem = cookedItemsRef.current.find(item =>
+          item.id === 'pistachioSpread_in_bowl' &&
+          isRectIntersect({ x: item.x, y: item.y, w: item.w, h: item.h }, facingZone)
+        );
+
+        if (bowlItem) {
+          // 볼 안의 아이템 삭제
+          cookedItemsRef.current = cookedItemsRef.current.filter(i => i.uid !== bowlItem.uid);
+          if (isMultiplayer && socketRef.current) socketRef.current.emit('removeItem', bowlItem.uid);
+
+          // 플레이어 손에 새 스프레드 생성
+          const newUid = `pistachioSpread_${now}_${Math.random()}`;
+          const newItem = {
+            id: 'pistachioSpread',
+            uid: newUid,
+            x: player.x,
+            y: player.y,
+            w: ITEM_SIZE,
+            h: ITEM_SIZE,
+            color: getColorForIngredient('pistachioSpread'),
+            name: getNameForIngredient('pistachioSpread'),
+            status: 'held',
+            holderId: socketRef.current?.id
+          };
+
+          cookedItemsRef.current.push(newItem);
+          player.holding = newUid;
+          broadcastItem(newItem);
+        }
+      }
+
+      // 4. 바닥/재료 집기 (기본)
+      else {
         const pickupRange = {
           x: facingX,
           y: facingY,
@@ -372,7 +456,7 @@ export const createGameLogicUpdate = (
         };
 
         const target = cookedItems
-          .filter(i => i.status === 'ground' || i.status === 'cooking')
+          .filter(i => i.status === 'ground' || i.status === 'cooking' || i.status === 'placed')
           .find(i => isRectIntersect(pickupRange, i));
 
         if (target) {

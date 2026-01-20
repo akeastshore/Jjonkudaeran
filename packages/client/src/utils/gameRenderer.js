@@ -24,7 +24,7 @@ export const createDrawFunction = (
     if (!canvasRef.current) return;
     const ctx = canvasRef.current.getContext('2d', { alpha: false });
 
-    // 배경을 체크무늬 타일로 채우기
+    // 1. 배경
     for (let row = 0; row < MAP_HEIGHT / GRID_SIZE; row++) {
       for (let col = 0; col < MAP_WIDTH / GRID_SIZE; col++) {
         const isEven = (row + col) % 2 === 0;
@@ -33,7 +33,7 @@ export const createDrawFunction = (
       }
     }
 
-    // 그리드선
+    // 2. 그리드선
     ctx.strokeStyle = '#D4C5B0';
     for (let i = 0; i < MAP_WIDTH / GRID_SIZE; i++) {
       for (let j = 0; j < MAP_HEIGHT / GRID_SIZE; j++) {
@@ -44,20 +44,24 @@ export const createDrawFunction = (
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
 
-    // Zones 렌더링
+    // 3. Zones 렌더링
     ZONES.forEach(zone => {
       // 배경색
       ctx.fillStyle = zone.type === 'exit' ? '#666' : (zone.type === 'wall' ? '#FFDAB9' : '#E8B878');
       ctx.fillRect(zone.px, zone.py, zone.pw, zone.ph);
 
-      // 재료 이미지
+      // (1) 재료 이미지
       if (zone.ingredient) {
         const ingredientImg = imagesRef.current[zone.ingredient];
         if (ingredientImg && ingredientImg.complete && ingredientImg.naturalHeight !== 0) {
+
           let scale = 0.95;
+
           if (zone.ingredient === 'milkPowder') scale = 1.4;
           else if (zone.ingredient === 'kadaif') scale = 1.3;
-          else if (zone.ingredient === 'pistachio') scale = 1.2;
+          else if (zone.ingredient.includes('pistachio')) {
+            scale = 1.2;
+          }
 
           const imgSize = zone.pw * scale;
           const imgX = zone.px + (zone.pw - imgSize) / 2;
@@ -66,9 +70,10 @@ export const createDrawFunction = (
         }
       }
 
-      // 도구 이미지
+      // (2) 도구 이미지 (여기서 화덕/Burner가 1차로 그려짐)
       if (zone.func && TOOL_IMAGES[zone.func]) {
         let toolImgSrc = TOOL_IMAGES[zone.func];
+
         if (zone.func === 'blend') {
           if (blenderRef.current.state === 'processing') {
             toolImgSrc = '/assets/tools/blender_closed_pistachio.png';
@@ -89,8 +94,22 @@ export const createDrawFunction = (
           }
         }
 
+        // 믹싱볼(mix)에 피스타치오 스프레드가 있으면 이미지 변경
+        if (zone.func === 'mix') {
+          const hasSpread = cookedItemsRef.current.some(item =>
+            item.id === 'pistachioSpread' &&
+            (item.status === 'cooking' || item.status === 'ground') &&
+            item.x + item.w > zone.px && item.x < zone.px + zone.pw &&
+            item.y + item.h > zone.py && item.y < zone.py + zone.ph
+          );
+          if (hasSpread) {
+            toolImgSrc = '/assets/ingredients/pistachio_spread_bowl.png';
+          }
+        }
+
         const toolImg = new Image();
         toolImg.src = toolImgSrc;
+
         if (toolImg.complete && toolImg.naturalHeight !== 0) {
           ctx.save();
           ctx.beginPath();
@@ -100,9 +119,13 @@ export const createDrawFunction = (
             ctx.clip();
           }
 
-          let toolScale = 1.0;
+          let toolScale = 1.5; // 전체적으로 아이콘 크기 증가
           if (zone.func === 'blend') {
-            toolScale = 2.0;
+            toolScale = 2.5;
+          } else if (zone.func === 'microwave') {
+            toolScale = 1.2; // 전자레인지 크기 줄임
+          } else if (zone.func === 'fridge') {
+            toolScale = 1.2; // 냉장고 크기 줄임
           }
 
           const imgRatio = toolImg.width / toolImg.height;
@@ -123,26 +146,40 @@ export const createDrawFunction = (
           ctx.drawImage(toolImg, imgX, imgY, imgWidth, imgHeight);
           ctx.restore();
 
-          // 불 처리
+          // (3) 화덕 위 프라이팬 처리 [여기가 핵심 수정!]
           if (zone.func === 'fire') {
             const burner = getBurnerState(zone);
-            let panImgSrc = '/assets/tools/burner.png';
 
-            if (burner.state === 'marshmallow_processing' || burner.state === 'marshmallow_ready' || burner.state === 'mixing') {
-              panImgSrc = '/assets/tools/burner_marshmallow.png';
-            } else if (burner.state === 'butter_processing' || burner.state === 'butter_ready') {
-              panImgSrc = '/assets/tools/burner_butter.png';
-            } else if (burner.state === 'final_processing') {
-              panImgSrc = '/assets/tools/burner_mid.png';
-            } else if (burner.state === 'final_ready') {
-              panImgSrc = '/assets/tools/burner_final.png';
+            // ★ [수정] 기본 이미지를 '화덕'이 아니라 '프라이팬(flyingpan_top)'으로 변경!
+            let panImgSrc = '/assets/tools/flyingpan_top.png';
+
+            // 요리 상태별 이미지 변경
+            if (burner.state.includes('marshmallow') || burner.state === 'mixing') {
+              panImgSrc = '/assets/tools/burner_marshmallow_top.png';
+            } else if (burner.state.includes('butter')) {
+              panImgSrc = '/assets/tools/burner_butter_top.png';
+            } else if (burner.state.includes('final')) {
+              panImgSrc = burner.state === 'final_ready'
+                ? '/assets/tools/burner_final_top.png'
+                : '/assets/tools/burner_mid_top.png';
+            } else if (burner.state === 'kadaif_processing') {
+              panImgSrc = '/assets/ingredients/kadaif_flyingpan.png';
+            } else if (burner.state === 'kadaif_ready') {
+              panImgSrc = '/assets/ingredients/kadaif_toasted_flyingpan.png';
             }
+            // 뭔가 요리 중이거나 재료가 있으면 요리 중인 팬 이미지 사용
+            else if (burner.state !== 'empty' && burner.state !== 'waiting') {
+              panImgSrc = '/assets/tools/burner_mid_top.png';
+            }
+            // (waiting 상태나 empty 상태일 때는 위의 기본값 flyingpan_top.png가 유지됨)
 
             const panImg = new Image();
             panImg.src = panImgSrc;
+
             if (panImg.complete && panImg.naturalHeight !== 0) {
-              let panScale = 1.6;
-              if (burner.state !== 'empty' && burner.state !== 'waiting' && !burner.state.startsWith('kadaif')) panScale = 2.0;
+
+              // ★ [수정] 프라이팬은 언제나 2.0배로 큼직하게 고정
+              let panScale = 2.0;
 
               const panRatio = panImg.width / panImg.height;
               let panWidth, panHeight, panX, panY;
@@ -155,18 +192,17 @@ export const createDrawFunction = (
                 panHeight = panWidth / panRatio;
               }
 
-              panX = zone.px + zone.pw / 2 - panWidth / 2 + 10;
+              panX = zone.px + zone.pw / 2 - panWidth / 2;
               panY = zone.py + zone.ph / 2 - panHeight / 2;
 
               ctx.drawImage(panImg, panX, panY, panWidth, panHeight);
 
-              // 팬 위에 있는 재료 렌더링 (대기 상태)
+              // 팬 위에 있는 재료 렌더링 (Waiting 상태)
               if (burner.state === 'waiting' && burner.items && burner.items.length > 0) {
                 burner.items.forEach((itemId, idx) => {
                   const itemImg = imagesRef.current[itemId];
                   if (itemImg && itemImg.complete && itemImg.naturalHeight !== 0) {
                     const itemSize = panWidth * 0.4;
-                    // 약간씩 겹쳐서 배치
                     const itemX = panX + (panWidth - itemSize) / 2 + (idx === 0 ? -10 : 10);
                     const itemY = panY + (panHeight - itemSize) / 2 - 10;
                     ctx.drawImage(itemImg, itemX, itemY, itemSize, itemSize);
@@ -180,18 +216,12 @@ export const createDrawFunction = (
                 const kadaifImg = imagesRef.current[kadaifId];
 
                 if (kadaifImg && kadaifImg.complete && kadaifImg.naturalHeight !== 0) {
-                  // 후라이팬 위에 그리기 위해 위치 조정
-                  const itemSize = panWidth * 0.5; // 후라이팬 크기의 절반 정도
+                  const itemSize = panWidth * 0.5;
                   const itemX = panX + (panWidth - itemSize) / 2;
                   const itemY = panY + (panHeight - itemSize) / 2 - 10;
-
                   ctx.drawImage(kadaifImg, itemX, itemY, itemSize, itemSize);
                 }
               }
-            }
-
-            if (fireRef.current.isOn) {
-              ctx.globalAlpha = 1.0;
             }
           }
         }
@@ -202,8 +232,8 @@ export const createDrawFunction = (
       ctx.lineWidth = 2;
       ctx.strokeRect(zone.px, zone.py, zone.pw, zone.ph);
 
-      // Processing 타이머
-      if (zone.func === 'microwave' || zone.func === 'blend') {
+      // 타이머 표시
+      if (zone.func === 'blend') {
         const processingItem = cookedItemsRef.current.find(item => {
           if (item.status !== 'processing') return false;
           const r1 = { x: item.x, y: item.y, w: item.w, h: item.h };
@@ -234,7 +264,7 @@ export const createDrawFunction = (
       }
     });
 
-    // 다른 플레이어
+    // 4. 다른 플레이어
     Object.keys(otherPlayersRef.current).forEach(id => {
       const p = otherPlayersRef.current[id];
       if (!p) return;
@@ -266,7 +296,6 @@ export const createDrawFunction = (
       ctx.beginPath(); ctx.arc(lx, ly, pupilSize, 0, Math.PI * 2); ctx.fill();
       ctx.beginPath(); ctx.arc(rx, ry, pupilSize, 0, Math.PI * 2); ctx.fill();
 
-      // 닉네임
       ctx.fillStyle = 'white';
       ctx.strokeStyle = 'black';
       ctx.lineWidth = 3;
@@ -275,44 +304,45 @@ export const createDrawFunction = (
       ctx.fillText(p.nickname || 'Player', p.x + PLAYER_SIZE / 2, p.y - 10);
     });
 
-    // 플레이어
+    // 5. 내 플레이어
     const player = playerRef.current;
     const playerDirection = player.direction || 'down';
-
-    // 방향 매핑: down->front, up->back, left->left, right->right
-    const directionMap = {
-      'down': 'front',
-      'up': 'back',
-      'left': 'left',
-      'right': 'right'
-    };
-
+    const directionMap = { 'down': 'front', 'up': 'back', 'left': 'left', 'right': 'right' };
     const charDirection = directionMap[playerDirection] || 'front';
     const charImg = imagesRef.current[`playerChar_${charDirection}`];
 
     const playerScale = 1.2;
 
     if (charImg && charImg.complete && charImg.naturalHeight !== 0) {
-
       const drawW = player.w;
       const drawH = player.h * playerScale;
-      const drawX = player.x; // 커진 만큼 왼쪽으로 이동
-      const drawY = player.y - (drawH - player.h) / 2; // 커진 만큼 위쪽으로 이동
+      const drawX = player.x;
+      const drawY = player.y - (drawH - player.h) / 2;
 
       ctx.drawImage(charImg, drawX, drawY, drawW, drawH);
     } else {
-      // 이미지가 로드되지 않았을 때 기본 사각형
       ctx.fillStyle = player.color;
       ctx.fillRect(player.x, player.y, player.w, player.h);
     }
 
-    // 플레이어가 들고 있는 아이템 그리기
+    // 6. 들고 있는 아이템
     if (player.holding) {
       const heldItem = cookedItemsRef.current.find(item => item.uid === player.holding);
       if (heldItem) {
-        // 플레이어 머리 위나 앞에 그림
-        const itemX = player.x + (player.w - heldItem.w) / 2;
-        const itemY = player.y - 10; // 머리 위로 살짝 올림
+        let heldScale = 1.0; // 기본 크기
+        if (heldItem.id === 'pistachio') {
+          heldScale = 0.8; // 피스타치오만 80% 크기로 줄임 (원하는 숫자로 조절 가능)
+        }
+
+        // 배율이 적용된 실제 그리기 크기 계산
+        const drawW = heldItem.w * heldScale;
+        const drawH = heldItem.h * heldScale;
+        let itemOffsetX = 0;
+        if (playerDirection === 'left') itemOffsetX = -15;
+        else if (playerDirection === 'right') itemOffsetX = 15;
+
+        const itemX = player.x + (player.w - heldItem.w) / 2 + itemOffsetX;
+        const itemY = player.y + 30;
 
         const ingredientImg = imagesRef.current[heldItem.id];
         if (ingredientImg && ingredientImg.complete && ingredientImg.naturalHeight !== 0) {
@@ -326,15 +356,53 @@ export const createDrawFunction = (
       }
     }
 
-    // 아이템 그리기
+    // 7. 바닥 아이템
+    const mixZone = ZONES.find(z => z.func === 'mix');
+    const fireZones = ZONES.filter(z => z.func === 'fire');
+
     const drawItem = (item) => {
       if (item.status === 'held') return;
 
+      // 2. ★ [핵심 수정] 믹싱볼(Mix) 영역 안에 있는 피스타치오 스프레드는 무조건 숨김!
+      // (ID가 바뀌었든 안 바뀌었든, 믹싱볼 위에 올라가 있으면 그리지 않음)
+      if (mixZone) {
+        // 아이템이 믹싱볼 영역과 겹치는지 확인
+        const isInMixer =
+          item.x + item.w > mixZone.px && item.x < mixZone.px + mixZone.pw &&
+          item.y + item.h > mixZone.py && item.y < mixZone.py + mixZone.ph;
+
+        if (isInMixer) {
+          // 스프레드 종류면 그리지 않고 함수 종료 (숨김)
+          if (item.id === 'pistachioSpread' || item.id === 'pistachioSpread_in_bowl') {
+            return;
+          }
+        }
+      }
+
+      // 3. 화덕(Fire) 위에 있는 카다이프 숨김
+      const onFireZone = fireZones.find(z =>
+        item.x + item.w > z.px && item.x < z.px + z.pw &&
+        item.y + item.h > z.py && item.y < z.py + z.ph
+      );
+      if (onFireZone) {
+        const burner = getBurnerState(onFireZone);
+        if (burner.state === 'kadaif_processing' && item.id.includes('kadaif')) return;
+        if (burner.state === 'kadaif_ready' && item.id.includes('toasted')) return;
+      }
+
+      // 4. 크기 조절 (피스타치오 등)
       let sizeMultiplier = 1.0;
       if (item.status === 'cooking' || item.status === 'processing') {
         sizeMultiplier = 1.0;
       }
 
+      if (item.id.includes('pistachio')) {
+        sizeMultiplier = 1.2; // 피스타치오 크게
+      } else if (item.id === 'peeledPistachio') {
+        sizeMultiplier = 2.0;
+      }
+
+      // 5. 실제 그리기
       const ingredientImg = imagesRef.current[item.id];
       if (ingredientImg && ingredientImg.complete && ingredientImg.naturalHeight !== 0) {
         const imgSize = item.w * sizeMultiplier;
@@ -348,6 +416,7 @@ export const createDrawFunction = (
         ctx.fill();
       }
 
+      // 6. 타이머 표시
       if (item.status === 'processing') {
         ctx.fillStyle = 'white';
         ctx.strokeStyle = 'black';

@@ -31,7 +31,8 @@ export const INGREDIENT_IMAGES = {
   filling: '/assets/ingredients/pistachio_spread.png',
   hardFilling: '/assets/ingredients/pistachio_spread.png',
   dough: '/assets/ingredients/dough.png',
-  panWithDough: '/assets/tools/burner_final.png',
+  panWithDough: '/assets/tools/burner_final_top.png',
+  dujjonku: '/assets/ingredients/dujjonku.png',
   finalCookie: '/assets/ingredients/dujjonku_final.png',
   packagedCookie: '/assets/ingredients/wrapped_dujjonku.png',
 };
