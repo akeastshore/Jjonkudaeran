@@ -10,7 +10,7 @@ export const useImageLoader = (selectedChar) => {
       const img = new Image();
       img.src = src;
       img.onload = () => {
-        // 이미지 로드 완료
+        imagesRef.current[key] = img;
       };
       img.onerror = () => {
         console.warn(`이미지 로드 실패: ${src}`);
@@ -23,7 +23,7 @@ export const useImageLoader = (selectedChar) => {
       const img = new Image();
       img.src = src;
       img.onload = () => {
-        // 이미지 로드 완료
+        imagesRef.current[`tool_${key}`] = img;
       };
       img.onerror = () => {
         console.warn(`도구 이미지 로드 실패: ${src}`);
@@ -31,8 +31,9 @@ export const useImageLoader = (selectedChar) => {
       imagesRef.current[`tool_${key}`] = img;
     });
 
-    // 캐릭터 이미지 로드
+    // 캐릭터 이미지 로드 (즉시 할당하여 로딩 시작)
     if (selectedChar) {
+      console.log('캐릭터 이미지 로드 시작:', selectedChar);
       const directions = ['front', 'back', 'left', 'right'];
       directions.forEach(dir => {
         const imgKey = `img${dir.charAt(0).toUpperCase() + dir.slice(1)}`;
@@ -40,11 +41,13 @@ export const useImageLoader = (selectedChar) => {
           const charImg = new Image();
           charImg.src = selectedChar[imgKey];
           charImg.onload = () => {
-            // 이미지 로드 완료
+            console.log(`캐릭터 이미지 로드 완료: ${dir}`, charImg.src);
+            imagesRef.current[`playerChar_${dir}`] = charImg;
           };
           charImg.onerror = () => {
-            console.warn(`캐릭터 이미지 로드 실패: ${selectedChar[imgKey]}`);
+            console.error(`캐릭터 이미지 로드 실패: ${selectedChar[imgKey]}`);
           };
+          // 즉시 할당하여 로딩 시작
           imagesRef.current[`playerChar_${dir}`] = charImg;
         }
       });
