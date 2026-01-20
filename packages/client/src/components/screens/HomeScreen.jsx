@@ -1,11 +1,14 @@
+import React, { useState } from 'react';
 import backgroundImage from '../../assets/background.png';
 import buttonGreen from '../../assets/button/green.png';
 import buttonOrange from '../../assets/button/orange.png';
 import buttonBrown from '../../assets/button/brown.png';
 import buttonDarkBrown from '../../assets/button/dark_borwn.png';
+import TutorialModal from '../TutorialModal';
 import '../../styles/HomeScreen.css';
 
 const HomeScreen = ({ setScreen, showSettings, setShowSettings }) => {
+  const [showTutorial, setShowTutorial] = useState(false);
   return (
     <div className="game-screen" style={{
       backgroundImage: `url(${backgroundImage})`,
@@ -108,7 +111,7 @@ const HomeScreen = ({ setScreen, showSettings, setShowSettings }) => {
         {/* 튜토리얼 버튼 */}
         <button
           className="image-button"
-          onClick={() => setScreen('tutorial')}
+          onClick={() => setShowTutorial(true)}
           style={{
             width: '200px',
             height: '90px',
@@ -224,6 +227,12 @@ const HomeScreen = ({ setScreen, showSettings, setShowSettings }) => {
           )}
         </div>
       </div>
+
+      {/* 튜토리얼 모달 */}
+      <TutorialModal 
+        isOpen={showTutorial} 
+        onClose={() => setShowTutorial(false)} 
+      />
     </div>
   );
 };

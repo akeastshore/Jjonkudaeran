@@ -176,11 +176,24 @@ button:hover {
   gap: 30px;
 }
 
-.action-buttons button {
-  padding: 15px 40px;
-  font-size: 1.1rem;
-  width: 150px;
-  font-weight: bold;
+/* 캐릭터 선택 화면 버튼 스타일 */
+.char-action-btn {
+  height: 44px;
+  padding: 0 24px;
+  border-radius: 14px;
+  border: 1px solid rgba(255,255,255,0.12);
+  background: rgba(0,0,0,0.28);
+  color: #F3DEC5;
+  font-weight: 800;
+  font-size: 16px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  min-width: 140px;
+}
+
+.char-action-btn:hover {
+  background: rgba(0,0,0,0.45);
+  border-color: rgba(255,255,255,0.2);
 }
 
 /* 로그인/회원가입 전환 텍스트 */
@@ -207,4 +220,979 @@ button:hover {
   width: 100%;
   padding: 12px;
   margin-top: 10px;
+}
+
+/* ============================================ */
+/* 멀티플레이 로비 화면 스타일 */
+/* ============================================ */
+
+/* 전체 배경 */
+.multiplayer-page {
+  min-height: 100vh;
+  background: url("./assets/backgrounds/choice_bg.png") center/cover no-repeat;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 20px;
+}
+
+/* 중앙 가독성용 오버레이 (배경 난잡해 보이는 거 방지) */
+.multiplayer-page::before{
+  content:"";
+  position:absolute; 
+  inset:0;
+  background: radial-gradient(circle at 50% 30%,
+    rgba(0,0,0,0.35) 0%,
+    rgba(0,0,0,0.62) 60%,
+    rgba(0,0,0,0.78) 100%);
+}
+
+/* 콘텐츠 래퍼 */
+.mp-wrap{
+  position: relative;
+  width: min(700px, 92vw);
+  text-align: center;
+}
+
+/* 상단 타이틀 */
+.mp-title{
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  font-size: clamp(26px, 3.2vw, 40px);
+  color: #F3DEC5;
+  text-shadow: 0 6px 18px rgba(30,18,12,0.65);
+  margin-bottom: 22px;
+}
+
+/* 카드 2개 컨테이너 */
+.mp-cards{
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+  justify-content: center;
+}
+
+@media (max-width: 720px){
+  .mp-cards{ grid-template-columns: 1fr; }
+}
+
+/* 카드 */
+.mp-card{
+  background: linear-gradient(180deg, rgba(55,55,55,0.92), rgba(32,32,32,0.92));
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 18px;
+  padding: 18px 18px 16px;
+  box-shadow: 0 12px 30px rgba(0,0,0,0.45);
+  backdrop-filter: blur(6px);
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  min-height: 220px;
+}
+
+/* 카드 위쪽 얇은 하이라이트 */
+.mp-card::before{
+  content:"";
+  position:absolute; 
+  left:0; 
+  right:0; 
+  top:0; 
+  height:2px;
+  background: rgba(243,222,197,0.35);
+}
+
+/* 카드 제목/설명 */
+.mp-card h2{
+  margin: 0 0 6px;
+  color: #F3DEC5;
+  font-weight: 800;
+  font-size: 20px;
+}
+.mp-card p{
+  margin: 0 0 14px;
+  color: rgba(243,222,197,0.75);
+  font-size: 14px;
+}
+
+/* 입력/코드 박스 */
+.mp-input{
+  width: 100%;
+  height: 46px;
+  border-radius: 14px;
+  border: 1px solid rgba(255,255,255,0.10);
+  background: rgba(0,0,0,0.28);
+  color: #F3DEC5;
+  outline: none;
+  padding: 0 14px;
+  font-size: 16px;
+  text-align: center;
+  text-transform: uppercase;
+  box-sizing: border-box;
+  margin-bottom: 14px;
+}
+.mp-input:focus{
+  border-color: rgba(232,195,106,0.55);
+  box-shadow: 0 0 0 4px rgba(232,195,106,0.14);
+}
+
+/* 인원수 컨트롤 */
+.mp-counter{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap: 12px;
+  margin: 10px 0 14px;
+}
+.mp-count{
+  font-weight: 900;
+  color: #E8C36A;
+  font-size: 26px;
+  text-shadow: 0 6px 14px rgba(0,0,0,0.35);
+  min-width: 30px;
+}
+.mp-counter-btn{
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  border: 1px solid rgba(255,255,255,0.15);
+  background: rgba(0,0,0,0.35);
+  color: #F3DEC5;
+  font-size: 18px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.mp-counter-btn:hover{
+  background: rgba(255,255,255,0.1);
+}
+
+/* 버튼들 */
+.mp-btn{
+  width: 100%;
+  height: 46px;
+  border-radius: 14px;
+  border: 0;
+  font-weight: 800;
+  font-size: 16px;
+  cursor: pointer;
+  transition: transform .08s ease, filter .15s ease;
+  margin-top: auto;
+}
+.mp-btn:active{ 
+  transform: translateY(1px) scale(0.99); 
+}
+
+.mp-btn-create{ 
+  background:#5AAF59; 
+  color:#1a1a1a; 
+}
+.mp-btn-create:hover{
+  background:#6BBF6A;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(90, 175, 89, 0.4);
+}
+
+.mp-btn-join{ 
+  background:#E8C36A; 
+  color:#1a1a1a; 
+}
+.mp-btn-join:hover{
+  background:#F0CF7A;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(232, 195, 106, 0.4);
+}
+
+/* 뒤로가기: 왼쪽 아래 */
+.mp-back{
+  margin-top: 18px;
+  display:flex;
+  justify-content:flex-start;
+}
+.mp-back button{
+  height: 44px;
+  padding: 0 18px;
+  border-radius: 14px;
+  border: 1px solid rgba(255,255,255,0.12);
+  background: rgba(0,0,0,0.28);
+  color: #F3DEC5;
+  font-weight: 800;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.mp-back button:hover{
+  background: rgba(0,0,0,0.45);
+  border-color: rgba(255,255,255,0.2);
+}
+
+/* ============================================ */
+/* 대기실 화면 스타일 */
+/* ============================================ */
+
+/* 전체 배경 */
+.waiting-page{
+  min-height: 100vh;
+  background: url("./assets/backgrounds/choice_bg.png") center/cover no-repeat;
+  position: relative;
+  display:flex;
+  align-items:flex-start;
+  justify-content:center;
+  padding: 42px 20px;
+}
+
+/* 가독성 오버레이 */
+.waiting-page::before{
+  content:"";
+  position:absolute; 
+  inset:0;
+  background: radial-gradient(circle at 50% 30%,
+    rgba(0,0,0,0.35) 0%,
+    rgba(0,0,0,0.68) 62%,
+    rgba(0,0,0,0.82) 100%);
+}
+
+.waiting-wrap{
+  position:relative;
+  width: min(980px, 94vw);
+}
+
+/* 상단 타이틀 */
+.waiting-title{
+  text-align:center;
+  font-weight: 900;
+  font-size: clamp(26px, 3vw, 40px);
+  color: #F3DEC5;
+  text-shadow: 0 10px 28px rgba(0,0,0,0.55);
+  margin-bottom: 18px;
+}
+
+/* 메인 패널 */
+.waiting-panel{
+  border-radius: 26px;
+  padding: 26px 26px 22px;
+  background: linear-gradient(180deg, rgba(45,45,45,0.92), rgba(25,25,25,0.92));
+  border: 1px solid rgba(255,255,255,0.10);
+  box-shadow: 0 24px 60px rgba(0,0,0,0.50);
+  backdrop-filter: blur(6px);
+}
+
+/* 룸 코드 */
+.room-code{
+  text-align:center;
+  margin: 10px 0 6px;
+  font-weight: 900;
+  font-size: clamp(44px, 5.2vw, 68px);
+  letter-spacing: 0.14em;
+  color: #E8C36A;
+  text-shadow: 0 10px 24px rgba(0,0,0,0.50);
+}
+.room-hint{
+  text-align:center;
+  color: rgba(243,222,197,0.70);
+  margin-bottom: 18px;
+  font-size: 14px;
+}
+
+/* 구분선 */
+.waiting-divider{
+  height:1px;
+  background: rgba(243,222,197,0.14);
+  margin: 18px 0;
+}
+
+/* 인원 표시 */
+.room-count{
+  text-align:center;
+  font-weight: 800;
+  color: rgba(243,222,197,0.85);
+  margin-bottom: 14px;
+  font-size: 18px;
+}
+.room-count .current{ 
+  color:#6BBF6A; 
+}
+.room-count .max{ 
+  color:#F3DEC5; 
+}
+
+/* 참가자 리스트 */
+.player-list{
+  display:flex;
+  flex-direction:column;
+  gap: 10px;
+  margin-top: 8px;
+  margin-bottom: 16px;
+}
+
+.player-row{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: 16px;
+  background: rgba(0,0,0,0.26);
+  border: 1px solid rgba(255,255,255,0.10);
+}
+
+.player-left{
+  display:flex;
+  align-items:center;
+  gap: 10px;
+  color:#F3DEC5;
+  font-weight: 800;
+}
+
+/* 방장 배지 */
+.host-badge{
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgba(232,195,106,0.18);
+  border: 1px solid rgba(232,195,106,0.35);
+  color: #E8C36A;
+  font-weight: 900;
+  font-size: 12px;
+}
+
+/* 대기 문구 */
+.waiting-status{
+  text-align:center;
+  margin-top: 14px;
+  color: rgba(243,222,197,0.62);
+  font-size: 14px;
+}
+
+/* ============================================ */
+/* 멀티 로비 화면 스타일 */
+/* ============================================ */
+
+/* PAGE BACKGROUND */
+.lobby-page{
+  min-height:100vh;
+  background:url("./assets/backgrounds/choice_bg.png") center/cover no-repeat;
+  position:relative;
+  overflow:hidden;
+}
+.lobby-page::before{
+  content:"";
+  position:absolute; 
+  inset:0;
+  background: radial-gradient(circle at 50% 30%,
+    rgba(0,0,0,0.35) 0%,
+    rgba(0,0,0,0.68) 60%,
+    rgba(0,0,0,0.82) 100%);
+}
+.lobby-wrap{
+  position:relative;
+  width: min(1200px, 94vw);
+  margin: 0 auto;
+  padding: 28px 18px;
+}
+
+/* TOP BAR (Room / Timer) */
+.lobby-top{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  margin-bottom: 18px;
+  color:#F3DEC5;
+  font-weight:900;
+}
+.lobby-room-code{
+  font-size: 28px;
+  letter-spacing: 0.02em;
+  text-shadow: 0 10px 20px rgba(0,0,0,0.55);
+}
+.lobby-room-code .code{
+  color:#E8C36A;
+  letter-spacing:0.14em;
+  margin-left: 8px;
+}
+
+.timer-pill{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  padding:10px 14px;
+  border-radius: 16px;
+  background: rgba(0,0,0,0.35);
+  border: 1px solid rgba(243,222,197,0.16);
+  box-shadow: 0 14px 28px rgba(0,0,0,0.45);
+}
+.timer-pill .num{
+  color:#E8C36A;
+  font-size: 22px;
+  font-weight: 950;
+}
+.timer-pill .num.warning{
+  color:#ff4444;
+}
+
+/* MAIN LAYOUT */
+.lobby-main{
+  display:grid;
+  grid-template-columns: 1fr 380px;
+  gap: 20px;
+  align-items: start;
+  max-width: 100%;
+}
+@media (max-width: 980px){
+  .lobby-main{ 
+    grid-template-columns: 1fr; 
+  }
+}
+
+/* CHARACTER AREA */
+.char-grid{
+  display:flex;
+  justify-content:flex-start;
+  align-items:flex-start;
+  gap: 30px;
+  padding-top: 80px;
+  padding-left: 10px;
+  width: 100%;
+  max-width: 650px;
+  flex-wrap: wrap;
+}
+.char-item{
+  width: 190px;
+  text-align:center;
+  transition: transform .12s ease, filter .15s ease, opacity .15s ease;
+  cursor: pointer;
+}
+.char-item img{
+  width: 170px;
+  height: 170px;
+  object-fit: contain;
+  filter: drop-shadow(0 14px 18px rgba(0,0,0,0.45));
+}
+.char-item .name{
+  margin-top: 16px;
+  color:#F3DEC5;
+  opacity: 0.9;
+  font-weight: 900;
+  font-size: 17px;
+}
+
+/* 3번째 캐릭터 (치오) 아래로 내리고 살짝 크게 */
+.char-item:nth-child(3) img{
+  transform: translateY(20px) scale(1.05);
+}
+
+/* 4번째, 5번째 캐릭터 (아래 2개)를 중앙에 배치 */
+.char-item:nth-child(4){
+  margin-left: 105px;
+}
+
+/* 선택 전 기본 hover */
+.char-item:hover{
+  transform: translateY(-2px);
+}
+
+/* 선택된 캐릭터 */
+.char-item.selected img{
+  filter:
+    drop-shadow(0 0 18px rgba(232,195,106,0.55))
+    drop-shadow(0 16px 20px rgba(0,0,0,0.50));
+}
+.char-item.selected .name{
+  color:#E8C36A;
+}
+
+/* 선택되면 다른 캐릭터 살짝 dim */
+.char-item.dimmed{
+  opacity: 0.55;
+  filter: grayscale(0.10);
+}
+
+/* RIGHT PANEL */
+.lobby-panel{
+  border-radius: 26px;
+  padding: 22px 22px 18px;
+  background: linear-gradient(180deg, rgba(45,45,45,0.90), rgba(25,25,25,0.90));
+  border: 1px solid rgba(243,222,197,0.14);
+  box-shadow: 0 24px 60px rgba(0,0,0,0.50);
+  backdrop-filter: blur(6px);
+  margin-top: 85px;
+}
+
+.lobby-panel-title{
+  text-align:center;
+  color:#F3DEC5;
+  font-weight: 950;
+  font-size: 20px;
+  margin-bottom: 16px;
+  text-shadow: 0 10px 18px rgba(0,0,0,0.45);
+}
+
+/* 플레이어 아바타 */
+.player-avatar{
+  width: 30px; 
+  height: 30px;
+  border-radius: 999px;
+  background: rgba(243,222,197,0.16);
+  border: 1px solid rgba(243,222,197,0.18);
+  overflow:hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  font-weight: 900;
+  color: rgba(243,222,197,0.6);
+}
+.player-avatar img{ 
+  width:100%; 
+  height:100%; 
+  object-fit:cover; 
+}
+
+/* 선택된 플레이어 */
+.player-row.selected{
+  border-color: rgba(232,195,106,0.45);
+  box-shadow: 0 0 0 4px rgba(232,195,106,0.12);
+}
+
+/* 준비 버튼 */
+.ready-btn{
+  width: 100%;
+  height: 52px;
+  border: 0;
+  border-radius: 16px;
+  font-weight: 950;
+  font-size: 18px;
+  cursor:pointer;
+  background: #E8C36A;
+  color: #1a1a1a;
+  box-shadow: 0 18px 30px rgba(0,0,0,0.35);
+  transition: transform .08s ease, background .15s ease, box-shadow .15s ease;
+}
+.ready-btn:hover{ 
+  background: #F0CF7A;
+  box-shadow: 0 20px 35px rgba(232,195,106,0.4);
+  transform: translateY(-1px);
+}
+.ready-btn:active{ 
+  transform: translateY(1px) scale(0.99); 
+}
+.ready-btn.cancel{
+  background: #f44336;
+  color: white;
+}
+.ready-btn.cancel:hover{
+  background: #e53935;
+  box-shadow: 0 20px 35px rgba(244,67,54,0.4);
+}
+.ready-btn.start-game{
+  background: #F5F5DC;
+  color: #1a1a1a;
+}
+.ready-btn.start-game:hover{
+  background: #FAFAEB;
+  box-shadow: 0 20px 35px rgba(245,245,220,0.5);
+}
+.ready-btn:disabled{
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+/* 안내 문구 */
+.panel-hint{
+  text-align:center;
+  margin-top: 10px;
+  color: rgba(243,222,197,0.65);
+  font-size: 13px;
+}
+
+/* ==================== 모달 스타일 ==================== */
+
+/* 배경 오버레이 */
+.modal-backdrop{
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(0,0,0,0.65);
+  z-index: 9999;
+}
+
+/* 모달 박스 */
+.modal{
+  width: min(720px, 92vw);
+  max-height: min(78vh, 720px);
+  border-radius: 22px;
+  background: linear-gradient(180deg, rgba(45,45,45,0.92), rgba(25,25,25,0.92));
+  border: 1px solid rgba(243,222,197,0.14);
+  box-shadow: 0 24px 60px rgba(0,0,0,0.55);
+  backdrop-filter: blur(8px);
+  overflow: hidden;
+  animation: modalSlideIn 0.3s ease-out;
+}
+
+/* 튜토리얼 모달 */
+.modal.tutorial-modal{
+  width: min(600px, 92vw);
+}
+
+@keyframes modalSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* 모달 헤더 */
+.modal-header{
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 18px 18px 12px;
+  border-bottom: 1px solid rgba(243,222,197,0.10);
+}
+
+.modal-header h2{
+  margin: 0;
+  font-size: 20px;
+  font-weight: 900;
+  color: #F3DEC5;
+}
+
+.modal-close{
+  position: absolute;
+  right: 18px;
+  top: 50%;
+  transform: translateY(-50%);
+  border: 0;
+  width: 38px;
+  height: 38px;
+  border-radius: 12px;
+  background: rgba(0,0,0,0.25);
+  color: #F3DEC5;
+  font-size: 20px;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.modal-close:hover{
+  background: rgba(0,0,0,0.4);
+  transform: translateY(-50%) scale(1.05);
+}
+
+/* 모달 바디 (스크롤 영역) */
+.modal-body{
+  padding: 16px 18px;
+  max-height: calc(min(78vh, 720px) - 64px - 64px);
+  overflow: auto;
+  color: rgba(243,222,197,0.88);
+  line-height: 1.55;
+}
+
+/* 튜토리얼 슬라이더 */
+.tutorial-slider{
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* 튜토리얼 페이지 */
+.tutorial-page{
+  min-height: 280px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+/* 이미지가 있는 페이지 */
+.page-with-images{
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 280px;
+}
+
+/* 텍스트 섹션 중앙 배치 */
+.page-with-images .t-section{
+  position: relative;
+  z-index: 2;
+  max-width: 360px;
+}
+
+/* 페이지 이미지 */
+.page-image{
+  position: absolute;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.page-image.left{
+  left: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  flex-direction: column;
+  gap: 8px;
+}
+
+.page-image.right{
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  flex-direction: column;
+  gap: 8px;
+}
+
+.page-image img{
+  max-width: 100px;
+  max-height: 100px;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  filter: drop-shadow(0 4px 8px rgba(0,0,0,0.3));
+  opacity: 0.9;
+}
+
+/* 이미지 크기 조정 */
+.page-image img.small{
+  max-width: 70px;
+  max-height: 70px;
+}
+
+.page-image img.medium{
+  max-width: 90px;
+  max-height: 90px;
+}
+
+.page-image img.large{
+  max-width: 100px;
+  max-height: 100px;
+}
+
+.page-image img.xlarge{
+  max-width: 180px;
+  max-height: 180px;
+}
+
+.page-image.left img{
+  animation: bounceIn 0.5s ease-out;
+}
+
+.page-image.right img{
+  animation: bounceIn 0.5s ease-out 0.1s both;
+}
+
+@keyframes bounceIn {
+  0% {
+    opacity: 0;
+    transform: scale(0.3);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.05);
+  }
+  100% {
+    opacity: 0.9;
+    transform: scale(1);
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateX(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* 네비게이션 */
+.tutorial-navigation{
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 12px 0;
+  border-top: 1px solid rgba(243,222,197,0.10);
+}
+
+.nav-btn{
+  width: 44px;
+  height: 44px;
+  border: 0;
+  border-radius: 12px;
+  background: rgba(232,195,106,0.15);
+  color: #E8C36A;
+  font-size: 18px;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.nav-btn:hover:not(:disabled){
+  background: rgba(232,195,106,0.25);
+  transform: scale(1.05);
+}
+
+.nav-btn:active:not(:disabled){
+  transform: scale(0.95);
+}
+
+.nav-btn:disabled{
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.page-indicator{
+  flex: 1;
+  text-align: center;
+  color: #E8C36A;
+  font-weight: 900;
+  font-size: 16px;
+}
+
+/* 페이지 도트 */
+.page-dots{
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 8px 0;
+}
+
+.page-dots .dot{
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  border: 0;
+  background: rgba(243,222,197,0.25);
+  cursor: pointer;
+  transition: all 0.2s;
+  padding: 0;
+}
+
+.page-dots .dot:hover{
+  background: rgba(243,222,197,0.4);
+  transform: scale(1.2);
+}
+
+.page-dots .dot.active{
+  background: #E8C36A;
+  width: 24px;
+  border-radius: 4px;
+}
+
+.modal-body::-webkit-scrollbar{
+  width: 10px;
+}
+
+.modal-body::-webkit-scrollbar-thumb{
+  background: rgba(232,195,106,0.28);
+  border-radius: 10px;
+}
+
+.modal-body::-webkit-scrollbar-track{
+  background: rgba(0,0,0,0.15);
+}
+
+/* 튜토리얼 섹션 */
+.t-section h3{
+  margin: 8px 0 8px;
+  color: #E8C36A;
+  font-size: 16px;
+  font-weight: 900;
+}
+
+.t-section ul,
+.t-section ol{
+  margin: 0 0 8px 0;
+  padding: 0;
+  list-style: none;
+}
+
+.t-section li{
+  margin-bottom: 4px;
+}
+
+.t-section .muted{
+  opacity: 0.7;
+  font-size: 0.9em;
+}
+
+.t-divider{
+  border: 0;
+  height: 1px;
+  background: rgba(243,222,197,0.10);
+  margin: 14px 0;
+}
+
+/* 모달 푸터 */
+.modal-footer{
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 18px 16px;
+  border-top: 1px solid rgba(243,222,197,0.10);
+}
+
+.modal-footer .checkbox{
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: rgba(243,222,197,0.75);
+  font-weight: 700;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.modal-footer .checkbox input[type="checkbox"]{
+  cursor: pointer;
+  width: 16px;
+  height: 16px;
+}
+
+/* UI 버튼 (모달용) */
+.ui-btn{
+  padding: 12px 16px;
+  border-radius: 14px;
+  border: 1px solid rgba(243,222,197,0.14);
+  background: rgba(0,0,0,0.25);
+  color: #F3DEC5;
+  font-weight: 900;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.ui-btn:hover{
+  background: rgba(0,0,0,0.4);
+  transform: translateY(-1px);
+}
+
+.ui-btn.primary{
+  background: #E8C36A;
+  border-color: rgba(0,0,0,0.25);
+  color: #1a1a1a;
+}
+
+.ui-btn.primary:hover{
+  background: #F0CF7A;
+  box-shadow: 0 8px 20px rgba(232,195,106,0.4);
 }

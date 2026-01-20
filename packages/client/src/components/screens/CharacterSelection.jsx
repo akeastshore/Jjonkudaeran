@@ -1,5 +1,7 @@
+import React from 'react';
 import { CHARACTERS } from '../../constants/characters';
 import choiceBg from '../../assets/backgrounds/choice_bg.png';
+import { Button } from '../ui';
 
 const CharacterSelection = ({ selectedChar, setSelectedChar, setScreen, handleStartGame }) => {
   return (
@@ -17,9 +19,10 @@ const CharacterSelection = ({ selectedChar, setSelectedChar, setScreen, handleSt
       flexDirection: 'column',
       justifyContent: 'flex-start',
       alignItems: 'center',
-      paddingTop: '150px',
+      paddingTop: '80px',
       paddingBottom: '20px'
     }}>
+      <h1 className="mp-title" style={{ marginBottom: '40px', textShadow: 'none' }}>캐릭터 선택</h1>
       <div className="char-list">
         {CHARACTERS.map(c => (
           <div
@@ -35,13 +38,17 @@ const CharacterSelection = ({ selectedChar, setSelectedChar, setScreen, handleSt
                 transform: c.id === 2 ? 'scale(0.85)' : c.id === 3 ? 'translateY(20px)' : 'none'
               }}
             />
-            <div>{c.name}</div>
+            <div style={{ fontWeight: 'bold' }}>{c.name}</div>
           </div>
         ))}
       </div>
       <div className="action-buttons">
-        <button className="back-btn" onClick={() => setScreen('home')}>뒤로가기</button>
-        <button onClick={handleStartGame}>게임 시작</button>
+        <Button variant="char-action" onClick={() => setScreen('home')}>
+          뒤로가기
+        </Button>
+        <Button variant="char-action" onClick={handleStartGame}>
+          게임 시작
+        </Button>
       </div>
     </div>
   );

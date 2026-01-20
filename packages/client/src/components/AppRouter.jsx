@@ -51,6 +51,8 @@ const AppRouter = ({
         <WaitingRoomScreen
           roomId={multiplayer.roomId}
           waitingInfo={multiplayer.waitingInfo}
+          socket={multiplayer.socket}
+          username={gameState.username}
         />
       );
 
