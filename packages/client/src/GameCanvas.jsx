@@ -25,6 +25,7 @@ import { useImageLoader } from './hooks/useImageLoader';
 import { useMultiplayerSync } from './hooks/useMultiplayerSync';
 import { usePlayerControls } from './hooks/usePlayerControls';
 import { spawnItem, checkRecipe, getBurnerState as getBurnerStateUtil } from './utils/gameMechanics';
+import { updateMovement as updatePlayerMovement } from './utils/playerMovement';
 
 const GameCanvas = ({ selectedChar, isPlaying, onBurgerDelivered, score, isMultiplayer, roomId, socketProp }) => {
   const canvasRef = useRef(null);
@@ -533,7 +534,7 @@ const GameCanvas = ({ selectedChar, isPlaying, onBurgerDelivered, score, isMulti
     let animationFrameId;
     const gameLoop = () => {
       if (isPlaying) {
-        updateMovement();
+        updatePlayerMovement(playerRef, keysRef, cookedItemsRef, ZONES, socketRef);
         updateGameLogic();
       }
 
@@ -573,97 +574,7 @@ const GameCanvas = ({ selectedChar, isPlaying, onBurgerDelivered, score, isMulti
     // 이동 및 서버 전송
     // GameCanvas.jsx 내부의 updateMovement 함수 전체 교체
 
-    const updateMovement = () => {
-      const player = playerRef.current;
-      const keys = keysRef.current;
-      const cookedItems = cookedItemsRef.current;
-      const now = Date.now();
-
-      // 1. 움직이기 전 상태 기억 (비교용)
-      const prevX = player.x;
-      const prevY = player.y;
-      const prevDir = player.direction;
-
-      // 2. 방향키 입력 감지 및 방향 즉시 업데이트
-      // (이동 딜레이와 상관없이 방향은 바로바로 바뀌어야 답답하지 않음)
-      let intendedDirection = null;
-      if (keys['w'] || keys['ArrowUp']) intendedDirection = 'up';
-      else if (keys['s'] || keys['ArrowDown']) intendedDirection = 'down';
-      else if (keys['a'] || keys['ArrowLeft']) intendedDirection = 'left';
-      else if (keys['d'] || keys['ArrowRight']) intendedDirection = 'right';
-
-      if (intendedDirection) {
-          player.direction = intendedDirection;
-      }
-
-      // 3. 실제 이동 처리 (MOVE_DELAY 체크)
-      if (now - player.lastMoveTime >= MOVE_DELAY) {
-          let dx = 0, dy = 0;
-
-          if (keys['w'] || keys['ArrowUp']) dy -= GRID_SIZE;
-          else if (keys['s'] || keys['ArrowDown']) dy += GRID_SIZE;
-          else if (keys['a'] || keys['ArrowLeft']) dx -= GRID_SIZE;
-          else if (keys['d'] || keys['ArrowRight']) dx += GRID_SIZE;
-
-          if (dx !== 0 || dy !== 0) {
-              const nextX = player.x + dx;
-              const nextY = player.y + dy;
-              
-              // 충돌 체크
-              const checkRect = { x: nextX + 5, y: nextY + 5, w: player.w - 10, h: player.h - 10 };
-              let collided = false;
-              if (nextX < 0 || nextX + player.w > MAP_WIDTH || nextY < 0 || nextY + player.h > MAP_HEIGHT) collided = true;
-              if (!collided) {
-                  for (const zone of ZONES) {
-                      if (isRectIntersect(checkRect, zone)) { collided = true; break; }
-                  }
-              }
-
-              // 충돌하지 않았다면 좌표 업데이트
-              if (!collided) {
-                  player.x = nextX;
-                  player.y = nextY;
-                  player.lastMoveTime = now;
-              }
-          }
-      }
-
-      // 4. ★ 핵심 수정: 위치가 바뀌었거나 OR 방향이 바뀌었으면 전송
-      if (player.x !== prevX || player.y !== prevY || player.direction !== prevDir) {
-          if (socketRef.current) {
-              socketRef.current.emit('playerMovement', {
-                  x: player.x,
-                  y: player.y,
-                  direction: player.direction
-              });
-          }
-      }
-
-      // 들고 있는 아이템 위치 조정
-      if (player.holding) {
-          const target = cookedItems.find(i => i.uid === player.holding);
-          if (target) {
-              // 캐릭터 중앙 기준으로 아이템 배치
-              const centerOffset = (PLAYER_SIZE - ITEM_SIZE) / 2;
-              if (player.direction === 'up') { 
-                target.x = player.x + centerOffset; 
-                target.y = player.y - ITEM_SIZE + 20; 
-              }
-              else if (player.direction === 'down') { 
-                target.x = player.x + centerOffset; 
-                target.y = player.y + PLAYER_SIZE - 20; 
-              }
-              else if (player.direction === 'left') { 
-                target.x = player.x - ITEM_SIZE + 20; 
-                target.y = player.y + centerOffset; 
-              }
-              else if (player.direction === 'right') { 
-                target.x = player.x + PLAYER_SIZE - 20; 
-                target.y = player.y + centerOffset; 
-              }
-          }
-      }
-    };
+    // updateMovement는 utils/playerMovement.js에서 import됨
 
     const draw = () => {
       if (!canvasRef.current) return;
