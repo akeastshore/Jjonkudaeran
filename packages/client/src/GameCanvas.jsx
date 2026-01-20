@@ -14,14 +14,14 @@ import { usePlayerControls } from './hooks/usePlayerControls';
 import { useGameLoop } from './hooks/useGameLoop';
 import GameContainer from './components/game/GameContainer';
 
-const GameCanvas = ({ 
-  selectedChar, 
-  isPlaying, 
-  onBurgerDelivered, 
-  score, 
-  isMultiplayer, 
-  roomId, 
-  socketProp 
+const GameCanvas = ({
+  selectedChar,
+  isPlaying,
+  onBurgerDelivered,
+  score,
+  isMultiplayer,
+  roomId,
+  socketProp
 }) => {
   const canvasRef = useRef(null);
   const keysRef = useRef({});
@@ -34,21 +34,21 @@ const GameCanvas = ({
   const playerRef = useRef({
     x: Math.floor((MAP_WIDTH / 2 - PLAYER_SIZE / 2) / GRID_SIZE) * GRID_SIZE,
     y: Math.floor((MAP_HEIGHT / 2) / GRID_SIZE) * GRID_SIZE,
-    w: PLAYER_SIZE, 
+    w: PLAYER_SIZE,
     h: PLAYER_SIZE,
-    color: '#646cff', 
-    holding: null, 
+    color: '#646cff',
+    holding: null,
     direction: 'down',
     lastMoveTime: 0
   });
 
   const itemsRef = useRef(JSON.parse(JSON.stringify(INITIAL_INGREDIENTS)));
-  const cookedItemsRef = useRef([]); 
+  const cookedItemsRef = useRef([]);
 
   const fireRef = useRef({
-    isOn: false, 
-    turnOffTime: 0, 
-    pressStartTime: 0, 
+    isOn: false,
+    turnOffTime: 0,
+    pressStartTime: 0,
     isPressing: false
   });
 
@@ -56,6 +56,8 @@ const GameCanvas = ({
     state: 'empty',
     finishTime: 0
   });
+
+  const trayStatesRef = useRef({});
 
   const burnerStatesRef = useRef({});
 
@@ -86,6 +88,7 @@ const GameCanvas = ({
     cookedItemsRef,
     fireRef,
     blenderRef,
+    trayStatesRef,
     burnerStatesRef,
     INITIAL_INGREDIENTS,
     ZONES,

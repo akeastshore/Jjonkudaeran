@@ -1,10 +1,10 @@
-import { 
-  GRID_SIZE, 
-  MAP_WIDTH, 
-  MAP_HEIGHT, 
-  PLAYER_SIZE, 
+import {
+  GRID_SIZE,
+  MAP_WIDTH,
+  MAP_HEIGHT,
+  PLAYER_SIZE,
   ITEM_SIZE,
-  TOOL_IMAGES 
+  TOOL_IMAGES
 } from '../constants/gameConstants';
 
 export const createDrawFunction = (
@@ -17,12 +17,13 @@ export const createDrawFunction = (
   cookedItemsRef,
   fireRef,
   blenderRef,
+  trayStatesRef,
   getBurnerState
 ) => {
   return () => {
     if (!canvasRef.current) return;
     const ctx = canvasRef.current.getContext('2d', { alpha: false });
-    
+
     // 배경을 체크무늬 타일로 채우기
     for (let row = 0; row < MAP_HEIGHT / GRID_SIZE; row++) {
       for (let col = 0; col < MAP_WIDTH / GRID_SIZE; col++) {
@@ -34,21 +35,21 @@ export const createDrawFunction = (
 
     // 그리드선
     ctx.strokeStyle = '#D4C5B0';
-    for(let i=0; i<MAP_WIDTH/GRID_SIZE; i++) {
-      for(let j=0; j<MAP_HEIGHT/GRID_SIZE; j++) {
-        ctx.strokeRect(i*GRID_SIZE, j*GRID_SIZE, GRID_SIZE, GRID_SIZE);
+    for (let i = 0; i < MAP_WIDTH / GRID_SIZE; i++) {
+      for (let j = 0; j < MAP_HEIGHT / GRID_SIZE; j++) {
+        ctx.strokeRect(i * GRID_SIZE, j * GRID_SIZE, GRID_SIZE, GRID_SIZE);
       }
     }
 
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    
+
     // Zones 렌더링
     ZONES.forEach(zone => {
       // 배경색
       ctx.fillStyle = zone.type === 'exit' ? '#666' : (zone.type === 'wall' ? '#FFDAB9' : '#E8B878');
       ctx.fillRect(zone.px, zone.py, zone.pw, zone.ph);
-      
+
       // 재료 이미지
       if (zone.ingredient) {
         const ingredientImg = imagesRef.current[zone.ingredient];
@@ -57,14 +58,14 @@ export const createDrawFunction = (
           if (zone.ingredient === 'milkPowder') scale = 1.4;
           else if (zone.ingredient === 'kadaif') scale = 1.3;
           else if (zone.ingredient === 'pistachio') scale = 1.2;
-          
+
           const imgSize = zone.pw * scale;
           const imgX = zone.px + (zone.pw - imgSize) / 2;
           const imgY = zone.py + (zone.ph - imgSize) / 2;
           ctx.drawImage(ingredientImg, imgX, imgY, imgSize, imgSize);
         }
       }
-      
+
       // 도구 이미지
       if (zone.func && TOOL_IMAGES[zone.func]) {
         let toolImgSrc = TOOL_IMAGES[zone.func];
@@ -75,55 +76,77 @@ export const createDrawFunction = (
             toolImgSrc = '/assets/tools/blender_pistachio_spread.png';
           }
         }
-        
+
+        if (zone.func === 'tray') {
+          const key = `${zone.x}_${zone.y}`;
+          const trayState = trayStatesRef.current[key];
+          if (trayState) {
+            if (trayState.state === 'dough') {
+              toolImgSrc = '/assets/ingredients/dough_spreaded.png';
+            } else if (trayState.state === 'cocoa') {
+              toolImgSrc = '/assets/ingredients/cocoapowder_spreaded.png';
+            }
+          }
+        }
+
         const toolImg = new Image();
         toolImg.src = toolImgSrc;
         if (toolImg.complete && toolImg.naturalHeight !== 0) {
           ctx.save();
           ctx.beginPath();
           ctx.rect(zone.px, zone.py, zone.pw, zone.ph);
-          ctx.clip();
-          
+
+          if (zone.func !== 'blend') {
+            ctx.clip();
+          }
+
+          let toolScale = 1.0;
+          if (zone.func === 'blend') {
+            toolScale = 2.0;
+          }
+
           const imgRatio = toolImg.width / toolImg.height;
           const zoneRatio = zone.pw / zone.ph;
           let imgWidth, imgHeight, imgX, imgY;
-          
+
           if (imgRatio > zoneRatio) {
-            imgHeight = zone.ph;
+            imgHeight = zone.ph * toolScale;
             imgWidth = imgHeight * imgRatio;
           } else {
-            imgWidth = zone.pw;
+            imgWidth = zone.pw * toolScale;
             imgHeight = imgWidth / imgRatio;
           }
-          
+
           imgX = zone.px + (zone.pw - imgWidth) / 2;
           imgY = zone.py + (zone.ph - imgHeight) / 2;
-          
+
           ctx.drawImage(toolImg, imgX, imgY, imgWidth, imgHeight);
           ctx.restore();
-          
+
           // 불 처리
           if (zone.func === 'fire') {
             const burner = getBurnerState(zone);
             let panImgSrc = '/assets/tools/burner.png';
-            
+
             if (burner.state === 'marshmallow_processing' || burner.state === 'marshmallow_ready' || burner.state === 'mixing') {
               panImgSrc = '/assets/tools/burner_marshmallow.png';
+            } else if (burner.state === 'butter_processing' || burner.state === 'butter_ready') {
+              panImgSrc = '/assets/tools/burner_butter.png';
             } else if (burner.state === 'final_processing') {
               panImgSrc = '/assets/tools/burner_mid.png';
             } else if (burner.state === 'final_ready') {
               panImgSrc = '/assets/tools/burner_final.png';
             }
-            
+
             const panImg = new Image();
             panImg.src = panImgSrc;
             if (panImg.complete && panImg.naturalHeight !== 0) {
               let panScale = 1.6;
-              if (burner.state !== 'empty') panScale = 2.0;
-              
+              if (burner.state !== 'empty' && burner.state !== 'waiting' && !burner.state.startsWith('kadaif')) panScale = 2.0;
+
               const panRatio = panImg.width / panImg.height;
               let panWidth, panHeight, panX, panY;
-              
+
               if (panRatio > zoneRatio) {
                 panHeight = zone.ph * panScale;
                 panWidth = panHeight * panRatio;
@@ -131,25 +154,54 @@ export const createDrawFunction = (
                 panWidth = zone.pw * panScale;
                 panHeight = panWidth / panRatio;
               }
-              
+
               panX = zone.px + zone.pw / 2 - panWidth / 2 + 10;
               panY = zone.py + zone.ph / 2 - panHeight / 2;
-              
+
               ctx.drawImage(panImg, panX, panY, panWidth, panHeight);
+
+              // 팬 위에 있는 재료 렌더링 (대기 상태)
+              if (burner.state === 'waiting' && burner.items && burner.items.length > 0) {
+                burner.items.forEach((itemId, idx) => {
+                  const itemImg = imagesRef.current[itemId];
+                  if (itemImg && itemImg.complete && itemImg.naturalHeight !== 0) {
+                    const itemSize = panWidth * 0.4;
+                    // 약간씩 겹쳐서 배치
+                    const itemX = panX + (panWidth - itemSize) / 2 + (idx === 0 ? -10 : 10);
+                    const itemY = panY + (panHeight - itemSize) / 2 - 10;
+                    ctx.drawImage(itemImg, itemX, itemY, itemSize, itemSize);
+                  }
+                });
+              }
+
+              // 카다이프 렌더링
+              if (burner.state === 'kadaif_processing' || burner.state === 'kadaif_ready') {
+                const kadaifId = burner.state === 'kadaif_ready' ? 'toastedKadaif' : 'kadaif_v1';
+                const kadaifImg = imagesRef.current[kadaifId];
+
+                if (kadaifImg && kadaifImg.complete && kadaifImg.naturalHeight !== 0) {
+                  // 후라이팬 위에 그리기 위해 위치 조정
+                  const itemSize = panWidth * 0.5; // 후라이팬 크기의 절반 정도
+                  const itemX = panX + (panWidth - itemSize) / 2;
+                  const itemY = panY + (panHeight - itemSize) / 2 - 10;
+
+                  ctx.drawImage(kadaifImg, itemX, itemY, itemSize, itemSize);
+                }
+              }
             }
-            
+
             if (fireRef.current.isOn) {
               ctx.globalAlpha = 1.0;
             }
           }
         }
       }
-      
+
       // 테두리
       ctx.strokeStyle = '#888';
       ctx.lineWidth = 2;
       ctx.strokeRect(zone.px, zone.py, zone.pw, zone.ph);
-      
+
       // Processing 타이머
       if (zone.func === 'microwave' || zone.func === 'blend') {
         const processingItem = cookedItemsRef.current.find(item => {
@@ -158,13 +210,13 @@ export const createDrawFunction = (
           const r2 = zone;
           return !(r2.px > r1.x + r1.w || r2.px + r2.pw < r1.x || r2.py > r1.y + r1.h || r2.py + r2.ph < r1.y);
         });
-        
+
         if (processingItem) {
           ctx.fillStyle = 'white';
           ctx.strokeStyle = 'black';
           ctx.lineWidth = 3;
           ctx.font = 'bold 20px Arial';
-          const remain = Math.ceil((processingItem.finishTime - Date.now())/1000);
+          const remain = Math.ceil((processingItem.finishTime - Date.now()) / 1000);
           const timerX = zone.px + zone.pw / 2;
           const timerY = zone.py + zone.ph / 2;
           ctx.strokeText(`${remain}s`, timerX, timerY);
@@ -186,47 +238,47 @@ export const createDrawFunction = (
     Object.keys(otherPlayersRef.current).forEach(id => {
       const p = otherPlayersRef.current[id];
       if (!p) return;
-      
+
       ctx.fillStyle = p.color || '#888';
       ctx.fillRect(p.x, p.y, PLAYER_SIZE, PLAYER_SIZE);
-      
+
       // 눈
       ctx.fillStyle = 'white';
       const off = 12, sz = 8;
-      const cx = p.x + PLAYER_SIZE/2, cy = p.y + PLAYER_SIZE/2;
+      const cx = p.x + PLAYER_SIZE / 2, cy = p.y + PLAYER_SIZE / 2;
       let lx, ly, rx, ry;
 
-      if (p.direction === 'up') { lx=cx-off; ly=cy-off; rx=cx+off; ry=cy-off; }
-      else if (p.direction === 'down') { lx=cx-off; ly=cy+off; rx=cx+off; ry=cy+off; }
-      else if (p.direction === 'left') { lx=cx-off; ly=cy; rx=cx+off/2; ry=cy; }
-      else { lx=cx-off/2; ly=cy; rx=cx+off; ry=cy; }
+      if (p.direction === 'up') { lx = cx - off; ly = cy - off; rx = cx + off; ry = cy - off; }
+      else if (p.direction === 'down') { lx = cx - off; ly = cy + off; rx = cx + off; ry = cy + off; }
+      else if (p.direction === 'left') { lx = cx - off; ly = cy; rx = cx + off / 2; ry = cy; }
+      else { lx = cx - off / 2; ly = cy; rx = cx + off; ry = cy; }
 
-      ctx.beginPath(); ctx.arc(lx, ly, sz, 0, Math.PI*2); ctx.fill();
-      ctx.beginPath(); ctx.arc(rx, ry, sz, 0, Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.arc(lx, ly, sz, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(rx, ry, sz, 0, Math.PI * 2); ctx.fill();
 
       ctx.fillStyle = 'black';
-      const pupilSize = sz*0.5;
-      if (p.direction === 'up') { ly -= sz*0.3; ry -= sz*0.3; }
-      else if (p.direction === 'down') { ly += sz*0.3; ry += sz*0.3; }
-      else if (p.direction === 'left') { lx -= sz*0.3; rx -= sz*0.3; }
-      else { lx += sz*0.3; rx += sz*0.3; }
+      const pupilSize = sz * 0.5;
+      if (p.direction === 'up') { ly -= sz * 0.3; ry -= sz * 0.3; }
+      else if (p.direction === 'down') { ly += sz * 0.3; ry += sz * 0.3; }
+      else if (p.direction === 'left') { lx -= sz * 0.3; rx -= sz * 0.3; }
+      else { lx += sz * 0.3; rx += sz * 0.3; }
 
-      ctx.beginPath(); ctx.arc(lx, ly, pupilSize, 0, Math.PI*2); ctx.fill();
-      ctx.beginPath(); ctx.arc(rx, ry, pupilSize, 0, Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.arc(lx, ly, pupilSize, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(rx, ry, pupilSize, 0, Math.PI * 2); ctx.fill();
 
       // 닉네임
       ctx.fillStyle = 'white';
       ctx.strokeStyle = 'black';
       ctx.lineWidth = 3;
       ctx.font = 'bold 16px Arial';
-      ctx.strokeText(p.nickname || 'Player', p.x + PLAYER_SIZE/2, p.y - 10);
-      ctx.fillText(p.nickname || 'Player', p.x + PLAYER_SIZE/2, p.y - 10);
+      ctx.strokeText(p.nickname || 'Player', p.x + PLAYER_SIZE / 2, p.y - 10);
+      ctx.fillText(p.nickname || 'Player', p.x + PLAYER_SIZE / 2, p.y - 10);
     });
 
     // 플레이어
     const player = playerRef.current;
     const playerDirection = player.direction || 'down';
-    
+
     // 방향 매핑: down->front, up->back, left->left, right->right
     const directionMap = {
       'down': 'front',
@@ -234,27 +286,55 @@ export const createDrawFunction = (
       'left': 'left',
       'right': 'right'
     };
-    
+
     const charDirection = directionMap[playerDirection] || 'front';
     const charImg = imagesRef.current[`playerChar_${charDirection}`];
-    
+
+    const playerScale = 1.2;
+
     if (charImg && charImg.complete && charImg.naturalHeight !== 0) {
-      ctx.drawImage(charImg, player.x, player.y, player.w, player.h);
+
+      const drawW = player.w;
+      const drawH = player.h * playerScale;
+      const drawX = player.x; // 커진 만큼 왼쪽으로 이동
+      const drawY = player.y - (drawH - player.h) / 2; // 커진 만큼 위쪽으로 이동
+
+      ctx.drawImage(charImg, drawX, drawY, drawW, drawH);
     } else {
       // 이미지가 로드되지 않았을 때 기본 사각형
       ctx.fillStyle = player.color;
       ctx.fillRect(player.x, player.y, player.w, player.h);
     }
 
+    // 플레이어가 들고 있는 아이템 그리기
+    if (player.holding) {
+      const heldItem = cookedItemsRef.current.find(item => item.uid === player.holding);
+      if (heldItem) {
+        // 플레이어 머리 위나 앞에 그림
+        const itemX = player.x + (player.w - heldItem.w) / 2;
+        const itemY = player.y - 10; // 머리 위로 살짝 올림
+
+        const ingredientImg = imagesRef.current[heldItem.id];
+        if (ingredientImg && ingredientImg.complete && ingredientImg.naturalHeight !== 0) {
+          ctx.drawImage(ingredientImg, itemX, itemY, heldItem.w, heldItem.h);
+        } else {
+          ctx.fillStyle = heldItem.color;
+          ctx.beginPath();
+          ctx.arc(itemX + heldItem.w / 2, itemY + heldItem.h / 2, heldItem.w / 2, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+    }
+
     // 아이템 그리기
     const drawItem = (item) => {
       if (item.status === 'held') return;
-      
+
       let sizeMultiplier = 1.0;
       if (item.status === 'cooking' || item.status === 'processing') {
-        sizeMultiplier = 0.7;
+        sizeMultiplier = 1.0;
       }
-      
+
       const ingredientImg = imagesRef.current[item.id];
       if (ingredientImg && ingredientImg.complete && ingredientImg.naturalHeight !== 0) {
         const imgSize = item.w * sizeMultiplier;
@@ -264,18 +344,18 @@ export const createDrawFunction = (
       } else {
         ctx.fillStyle = item.color;
         ctx.beginPath();
-        ctx.arc(item.x + item.w/2, item.y + item.h/2, (item.w/2) * sizeMultiplier, 0, Math.PI*2);
+        ctx.arc(item.x + item.w / 2, item.y + item.h / 2, (item.w / 2) * sizeMultiplier, 0, Math.PI * 2);
         ctx.fill();
       }
-      
+
       if (item.status === 'processing') {
         ctx.fillStyle = 'white';
         ctx.strokeStyle = 'black';
         ctx.lineWidth = 3;
         ctx.font = 'bold 16px Arial';
-        const remain = Math.ceil((item.finishTime - Date.now())/1000);
-        ctx.strokeText(`${remain}s`, item.x + item.w/2, item.y - 10);
-        ctx.fillText(`${remain}s`, item.x + item.w/2, item.y - 10);
+        const remain = Math.ceil((item.finishTime - Date.now()) / 1000);
+        ctx.strokeText(`${remain}s`, item.x + item.w / 2, item.y - 10);
+        ctx.fillText(`${remain}s`, item.x + item.w / 2, item.y - 10);
       }
     };
 
