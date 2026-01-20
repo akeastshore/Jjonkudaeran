@@ -23,6 +23,8 @@ import {
 import { getColorForIngredient, getNameForIngredient } from './utils/ingredientHelpers';
 import { useImageLoader } from './hooks/useImageLoader';
 import { useMultiplayerSync } from './hooks/useMultiplayerSync';
+import { usePlayerControls } from './hooks/usePlayerControls';
+import { spawnItem, checkRecipe, getBurnerState as getBurnerStateUtil } from './utils/gameMechanics';
 
 const GameCanvas = ({ selectedChar, isPlaying, onBurgerDelivered, score, isMultiplayer, roomId, socketProp }) => {
   const canvasRef = useRef(null);
@@ -73,18 +75,8 @@ const GameCanvas = ({ selectedChar, isPlaying, onBurgerDelivered, score, isMulti
   // 각 화구마다 독립적인 상태 관리 (위치를 키로 사용)
   const burnerStatesRef = useRef({});
   
-  // 화구 상태 가져오기 헬퍼 함수
-  const getBurnerState = (zone) => {
-    const key = `${zone.x}_${zone.y}`;
-    if (!burnerStatesRef.current[key]) {
-      burnerStatesRef.current[key] = {
-        state: 'empty',
-        finishTime: 0,
-        items: []
-      };
-    }
-    return burnerStatesRef.current[key];
-  };
+  // 화구 상태 가져오기 (유틸리티 함수 사용)
+  const getBurnerState = (zone) => getBurnerStateUtil(burnerStatesRef, zone);
 
   // 커스텀 훅 사용
   const imagesRef = useImageLoader(selectedChar);
@@ -95,6 +87,7 @@ const GameCanvas = ({ selectedChar, isPlaying, onBurgerDelivered, score, isMulti
     fireRef,
     cookedItemsRef
   );
+  usePlayerControls(keysRef);
 
   // --- [게임 루프 및 로직] ---
   useEffect(() => {
@@ -123,14 +116,7 @@ const GameCanvas = ({ selectedChar, isPlaying, onBurgerDelivered, score, isMulti
        playerRef.current.y = Math.floor(startY / GRID_SIZE) * GRID_SIZE;
     }
 
-    const handleKeyDown = (e) => { 
-      if(["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", " ", "Space"].includes(e.key)) e.preventDefault();
-      keysRef.current[e.key] = true; 
-    };
-    const handleKeyUp = (e) => { keysRef.current[e.key] = false; };
-    
-    window.addEventListener('keydown', handleKeyDown);
-    window.addEventListener('keyup', handleKeyUp);
+    // 키보드 컨트롤은 usePlayerControls 훅에서 처리됨
 
     // 헬퍼: 아이템 생성
     const spawnItem = (id, zone) => {
@@ -1026,8 +1012,6 @@ const GameCanvas = ({ selectedChar, isPlaying, onBurgerDelivered, score, isMulti
 
     gameLoop();
     return () => {
-      window.removeEventListener('keydown', handleKeyDown);
-      window.removeEventListener('keyup', handleKeyUp);
       cancelAnimationFrame(animationFrameId);
     };
   }, [selectedChar, isPlaying, onBurgerDelivered, socketProp, isMultiplayer]);
