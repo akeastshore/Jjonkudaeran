@@ -35,7 +35,7 @@ export const useGameTimer = (gameState, disconnectSocket, multiplayer) => {
     if (gameState.screen === 'gameplay') {
       gameState.setCountDown(3);
       gameState.setIsPlaying(false);
-      gameState.setTimeLeft(120);
+      gameState.setTimeLeft(3);
       gameState.setScore(0);
 
       const countInterval = setInterval(() => {

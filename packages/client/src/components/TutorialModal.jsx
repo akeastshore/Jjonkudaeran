@@ -38,10 +38,14 @@ const TutorialModal = ({ isOpen, onClose }) => {
       title: '2) 속 만들기',
       images: {
         left: [
-          { src: '/assets/ingredients/kadaif_toasted.png', size: 'small' },
-          { src: '/assets/ingredients/white_chocolate.png', size: 'small' }
+          { src: '/assets/ingredients/kadaif_toasted.png', size: 'medium' },
+          { src: '/assets/ingredients/white_chocolate.png', size: 'small' },
+          { src: '/assets/tools/freezer.png', size: 'medium' }
         ],
-        right: { src: '/assets/ingredients/whitechocolate_pistachiospread.png', size: 'large' }
+        right: [
+          { src: '/assets/ingredients/whitechocolate_pistachiospread.png', size: 'medium' },
+          { src: '/assets/ingredients/innerpart.png', size: 'medium' }
+        ]
       },
       content: (
         <ol>
@@ -58,7 +62,10 @@ const TutorialModal = ({ isOpen, onClose }) => {
           { src: '/assets/ingredients/marshmallow.png', size: 'small' },
           { src: '/assets/ingredients/cocoa_powder.png', size: 'small' }
         ],
-        right: { src: '/assets/tools/burner_final.png', size: 'large' }
+        right: [
+          { src: '/assets/tools/burner_final.png', size: 'large' },
+          { src: '/assets/ingredients/dough_spreaded.png', size: 'large' }
+        ]
       },
       content: (
         <ol>

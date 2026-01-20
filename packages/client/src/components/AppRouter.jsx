@@ -63,6 +63,7 @@ const AppRouter = ({
           roomId={multiplayer.roomId}
           characters={CHARACTERS}
           onGameStart={() => gameState.setScreen('gameplay')}
+          setSelectedChar={gameState.setSelectedChar}
         />
       );
 
@@ -94,6 +95,7 @@ const AppRouter = ({
       );
 
     case 'result':
+      const resultCharacter = CHARACTERS.find(c => c.id === gameState.selectedChar) || CHARACTERS[0];
       return (
         <ResultScreen
           score={gameState.score}
@@ -104,12 +106,14 @@ const AppRouter = ({
           resultTimeLeft={gameState.resultTimeLeft}
           onRestart={() => {
             if (multiplayer.gameMode === 'multi' && multiplayer.socket) {
+              console.log('🔵 [클라이언트] voteRestart 이벤트 전송');
               multiplayer.socket.emit('voteRestart');
             } else {
               gameState.setScreen('gameplay');
             }
           }}
           onGoHome={handlers.handleGoHome}
+          selectedChar={resultCharacter}
         />
       );
 

@@ -7,14 +7,14 @@ export const useGameState = () => {
   const [selectedChar, setSelectedChar] = useState(null);
   const [countDown, setCountDown] = useState(3);
   const [isPlaying, setIsPlaying] = useState(false);
-  const [timeLeft, setTimeLeft] = useState(120);
+  const [timeLeft, setTimeLeft] = useState(3);
   const [score, setScore] = useState(0);
   const [resultTimeLeft, setResultTimeLeft] = useState(10);
 
   const resetGameState = () => {
     setCountDown(3);
     setIsPlaying(false);
-    setTimeLeft(120);
+    setTimeLeft(3);
     setScore(0);
   };
 

@@ -1,0 +1,13 @@
+{
+  "name": "jjonkudaeran-workspace",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "concurrently \"npm run dev --prefix packages/client\" \"npm run dev --prefix packages/server\"",
+    "client": "npm run dev --prefix packages/client",
+    "server": "npm run dev --prefix packages/server"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}

@@ -9,7 +9,7 @@ import {
   PlayerListItem 
 } from './components/ui';
 
-const MultiLobby = ({ socket, roomId, characters, onGameStart }) => {
+const MultiLobby = ({ socket, roomId, characters, onGameStart, setSelectedChar }) => {
   const [players, setPlayers] = useState({});
   const [myCharId, setMyCharId] = useState(null);
   
@@ -26,7 +26,11 @@ const MultiLobby = ({ socket, roomId, characters, onGameStart }) => {
       setPlayers(roomPlayers);
       // 내 현재 선택 상태 동기화
       if (roomPlayers[socket.id]) {
-        setMyCharId(roomPlayers[socket.id].charId);
+        const charId = roomPlayers[socket.id].charId;
+        setMyCharId(charId);
+        if (charId) {
+          setSelectedChar(charId); // gameState에도 동기화
+        }
       }
     });
 
@@ -55,6 +59,7 @@ const MultiLobby = ({ socket, roomId, characters, onGameStart }) => {
   const selectChar = (charId) => {
     if (players[socket.id]?.isReady) return; 
     setMyCharId(charId);
+    setSelectedChar(charId); // gameState에도 저장
     socket.emit('selectCharacter', charId);
   };
 

@@ -1,4 +1,6 @@
 // 게임 결과 화면
+import { useEffect } from 'react';
+
 const ResultScreen = ({ 
   score, 
   username, 
@@ -7,89 +9,102 @@ const ResultScreen = ({
   socket, 
   resultTimeLeft, 
   onRestart, 
-  onGoHome 
+  onGoHome,
+  selectedChar
 }) => {
   const amIVoted = socket && roomPlayers[socket.id]?.wantsRestart;
 
+  // 디버깅: roomPlayers 변경 감지
+  useEffect(() => {
+    console.log('=== ResultScreen roomPlayers 업데이트 ===');
+    console.log('전체 roomPlayers:', roomPlayers);
+    console.log('socket.id:', socket?.id);
+    console.log('내 정보:', roomPlayers[socket?.id]);
+    console.log('내가 투표했나?:', amIVoted);
+  }, [roomPlayers, socket?.id, amIVoted]);
+
+  // 두쫀쿠 개수 계산
+  const playerCount = gameMode === 'multi' ? Object.keys(roomPlayers).length : 1;
+  const baseScore = playerCount * 2;
+  let dujjonkuCount = 0;
+  
+  if (score >= baseScore) {
+    dujjonkuCount = Math.min(3, score - baseScore + 1);
+  }
+
   return (
-    <div className="game-screen">
-      <h1 style={{ fontSize: '3rem', color: '#FFD700' }}>👨‍🍳 영업 종료!</h1>
-
-      <div style={{ 
-        background: '#333', 
-        padding: '30px', 
-        borderRadius: '15px', 
-        marginTop: '10px', 
-        minWidth: '400px' 
-      }}>
-        <h2>최종 스코어</h2>
-        <p style={{ 
-          fontSize: '4rem', 
-          fontWeight: 'bold', 
-          margin: '10px 0', 
-          color: '#4CAF50' 
-        }}>
-          🍔 {score}개
-        </p>
-        <p style={{ color: '#ccc' }}>{username} 셰프님 수고하셨습니다!</p>
-
-        <hr style={{ borderColor: '#555', margin: '20px 0' }} />
+    <div className="result-screen">
+      <div className="result-container">
+        <h1 className="result-title">영업 종료!</h1>
+        
+        {/* 두쫀쿠 이미지 슬롯 */}
+        <div className="result-dujjonku">
+          {Array.from({ length: 3 }).map((_, idx) => (
+            <div key={idx} className="dujjonku-slot">
+              {idx < dujjonkuCount ? (
+                <img 
+                  src="/assets/ingredients/dujjonku_fianl.png" 
+                  alt="두쫀쿠"
+                  className="dujjonku-img"
+                />
+              ) : (
+                <div className="dujjonku-empty" />
+              )}
+            </div>
+          ))}
+        </div>
+        
+        {/* 왼쪽: 캐릭터 */}
+        <div className="result-character">
+          {selectedChar && (
+            <img 
+              src={selectedChar.imgFront} 
+              alt={selectedChar.name}
+              className="result-char-img"
+            />
+          )}
+        </div>
 
         {/* 멀티플레이어 재도전 투표 */}
         {gameMode === 'multi' && (
-          <div style={{ marginBottom: '20px' }}>
-            <h3>재도전 대기 중... ({resultTimeLeft}초)</h3>
-            <div style={{ 
-              display: 'flex', 
-              gap: '10px', 
-              justifyContent: 'center', 
-              marginTop: '10px' 
-            }}>
-              {Object.values(roomPlayers).map((p, idx) => (
-                <div 
-                  key={idx} 
-                  style={{
-                    padding: '10px 20px',
-                    borderRadius: '20px',
-                    background: p.wantsRestart ? '#4CAF50' : '#555',
-                    color: 'white',
-                    border: '2px solid white',
-                    opacity: p.wantsRestart ? 1 : 0.5
-                  }}
-                >
-                  {p.nickname} {p.wantsRestart ? '✅' : '...'}
-                </div>
-              ))}
+          <div className="result-voting">
+            <h3 className="voting-title">재도전 대기중</h3>
+            <div className="voting-players">
+              {Object.keys(roomPlayers).length === 0 ? (
+                <p>플레이어 정보 로딩 중...</p>
+              ) : (
+                Object.values(roomPlayers).map((p, idx) => {
+                  console.log(`🎨 [렌더링] ${p.nickname}: wantsRestart=${p.wantsRestart}`);
+                  return (
+                    <div 
+                      key={idx} 
+                      className={`voting-player ${p.wantsRestart ? 'ready' : 'waiting'}`}
+                    >
+                      {p.nickname} {p.wantsRestart ? '✅' : ''}
+                    </div>
+                  );
+                })
+              )}
             </div>
-            <p style={{ fontSize: '0.8rem', color: '#aaa', marginTop: '5px' }}>
-              * 전원이 동의해야 게임이 시작됩니다.
-            </p>
+            <p className="voting-hint">* 전원이 동의해야 게임이 시작됩니다.</p>
           </div>
         )}
-      </div>
 
-      {/* 액션 버튼 */}
-      <div className="menu-container" style={{ 
-        marginTop: '20px', 
-        flexDirection: 'row', 
-        justifyContent: 'center' 
-      }}>
-        <button
-          className="menu-button"
-          style={{
-            backgroundColor: amIVoted ? '#f44336' : '#2196F3',
-            minWidth: '150px'
-          }}
-          onClick={onRestart}
-        >
-          {gameMode === 'multi'
-            ? (amIVoted ? '다시 하기 취소' : '다시 하기 투표')
-            : '다시 하기'}
-        </button>
+        {/* 액션 버튼 */}
+        <div className="result-actions">
+          <button
+            className={`result-btn ${amIVoted ? 'btn-cancel' : 'btn-restart'}`}
+            onClick={onRestart}
+          >
+            {gameMode === 'multi'
+              ? (amIVoted ? '다시 하기 취소' : '다시 하러가기')
+              : '다시 하기'}
+          </button>
 
-        <button className="menu-button" onClick={onGoHome}>
-          홈으로
-        </button>
+          <button className="result-btn btn-home" onClick={onGoHome}>
+            홈으로
+          </button>
+        </div>
       </div>
     </div>
   );
