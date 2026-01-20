@@ -1,30 +1,41 @@
 // Socket 이벤트 리스너 관리 훅
-import { useCallback } from 'react';
+import { useCallback, useRef, useEffect } from 'react';
 
 export const useSocketManager = (gameState, multiplayer, disconnectSocket) => {
+  // 최신 값을 참조하기 위한 ref
+  const gameStateRef = useRef(gameState);
+  const multiplayerRef = useRef(multiplayer);
+  const disconnectSocketRef = useRef(disconnectSocket);
+
+  useEffect(() => {
+    gameStateRef.current = gameState;
+    multiplayerRef.current = multiplayer;
+    disconnectSocketRef.current = disconnectSocket;
+  }, [gameState, multiplayer, disconnectSocket]);
+
   const setupSocketListeners = useCallback((socket) => {
     socket.on('error', (msg) => {
       alert(msg);
-      disconnectSocket();
-      multiplayer.setSocket(null);
-      gameState.setScreen('lobby');
+      disconnectSocketRef.current();
+      multiplayerRef.current.setSocket(null);
+      gameStateRef.current.setScreen('lobby');
     });
 
     socket.on('waitingUpdate', (info) => {
-      multiplayer.setWaitingInfo(info);
+      multiplayerRef.current.setWaitingInfo(info);
     });
 
     socket.on('allPlayersJoined', () => {
-      gameState.setScreen('multi_lobby');
+      gameStateRef.current.setScreen('multi_lobby');
     });
 
     socket.on('updateScore', (serverScore) => {
-      gameState.setScore(serverScore);
+      gameStateRef.current.setScore(serverScore);
     });
 
     socket.on('restartGame', () => {
-      gameState.resetGameState();
-      gameState.setScreen('gameplay');
+      gameStateRef.current.resetGameState();
+      gameStateRef.current.setScreen('multi_lobby');
     });
 
     socket.on('playerLeft', () => {
@@ -33,15 +44,20 @@ export const useSocketManager = (gameState, multiplayer, disconnectSocket) => {
     });
 
     socket.on('roomUpdate', (playersData) => {
-      multiplayer.setRoomPlayers(playersData);
+      console.log('📥 [클라이언트] roomUpdate 수신:', 
+        Object.values(playersData).map(p => ({ nickname: p.nickname, wantsRestart: p.wantsRestart }))
+      );
+      console.log('🔧 [클라이언트] setRoomPlayers 호출 전');
+      multiplayerRef.current.setRoomPlayers(playersData);
+      console.log('✅ [클라이언트] setRoomPlayers 호출 완료');
       const members = Object.values(playersData).map(p => p.nickname);
-      multiplayer.setWaitingInfo({
+      multiplayerRef.current.setWaitingInfo({
         current: Object.keys(playersData).length,
         max: 0,
         members: members
       });
     });
-  }, [gameState, multiplayer, disconnectSocket]);
+  }, []); // 의존성 배열 비움
 
   return { setupSocketListeners };
 };

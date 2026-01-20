@@ -1,5 +1,6 @@
 // src/App.jsx - 완전히 간소화된 버전
 import './App.css';
+import { useEffect } from 'react';
 import { useGameContext } from './context/GameContext';
 import { useGameState } from './hooks/useGameState';
 import { useMultiplayer } from './hooks/useMultiplayer';
@@ -21,6 +22,16 @@ function App() {
   const { handleCreateRoom, handleJoinRoom } = useRoomManager(connectSocket, gameState, multiplayer, setupSocketListeners);
   const { handleGoogleLogin } = useAuth(getServerUrl, gameState);
   const { handleGoHome, handleBurgerDelivered, handleStartGame } = useGameTimer(gameState, disconnectSocket, multiplayer);
+
+  // ★ 중요: 소켓이 변경될 때마다 리스너 설정
+  useEffect(() => {
+    console.log('🔧 [App] useEffect 실행, socket:', multiplayer.socket?.id);
+    if (multiplayer.socket) {
+      console.log('🔧 [App] 소켓 리스너 설정 시작');
+      setupSocketListeners(multiplayer.socket);
+      console.log('✅ [App] 소켓 리스너 설정 완료');
+    }
+  }, [multiplayer.socket]);
 
   // 모든 핸들러를 하나의 객체로
   const handlers = {
