@@ -1,0 +1,42 @@
+import { useState } from 'react';
+
+export const useGameState = () => {
+  const [username, setUsername] = useState('');
+  const [screen, setScreen] = useState('login');
+  const [showSettings, setShowSettings] = useState(false);
+  const [selectedChar, setSelectedChar] = useState(null);
+  const [countDown, setCountDown] = useState(3);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [timeLeft, setTimeLeft] = useState(120);
+  const [score, setScore] = useState(0);
+  const [resultTimeLeft, setResultTimeLeft] = useState(10);
+
+  const resetGameState = () => {
+    setCountDown(3);
+    setIsPlaying(false);
+    setTimeLeft(120);
+    setScore(0);
+  };
+
+  return {
+    username,
+    setUsername,
+    screen,
+    setScreen,
+    showSettings,
+    setShowSettings,
+    selectedChar,
+    setSelectedChar,
+    countDown,
+    setCountDown,
+    isPlaying,
+    setIsPlaying,
+    timeLeft,
+    setTimeLeft,
+    score,
+    setScore,
+    resultTimeLeft,
+    setResultTimeLeft,
+    resetGameState,
+  };
+};
