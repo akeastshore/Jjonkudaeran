@@ -28,7 +28,7 @@ export const useGameTimer = (gameState, disconnectSocket, multiplayer) => {
 
       return () => clearInterval(timer);
     }
-  }, [gameState.screen, gameState, handleGoHome]);
+  }, [gameState.screen, handleGoHome]);
 
   // Game Countdown
   useEffect(() => {
@@ -51,7 +51,7 @@ export const useGameTimer = (gameState, disconnectSocket, multiplayer) => {
 
       return () => clearInterval(countInterval);
     }
-  }, [gameState.screen, gameState]);
+  }, [gameState.screen]);
 
   // Game Timer
   useEffect(() => {
@@ -69,7 +69,7 @@ export const useGameTimer = (gameState, disconnectSocket, multiplayer) => {
       }, 1000);
     }
     return () => clearInterval(timerRef.current);
-  }, [gameState.isPlaying, gameState.timeLeft, gameState]);
+  }, [gameState.isPlaying, gameState.timeLeft]);
 
   const handleBurgerDelivered = useCallback(() => {
     gameState.setScore(prev => prev + 1);
