@@ -16,10 +16,8 @@ const CharacterSelection = ({ selectedChar, setSelectedChar, setScreen, handleSt
       display: 'flex',
       flexDirection: 'column',
       justifyContent: 'flex-start',
-      alignItems: 'flex-start',
+      alignItems: 'center',
       paddingTop: '150px',
-      paddingLeft: '30px',
-      paddingRight: '350px',
       paddingBottom: '20px'
     }}>
       <div className="char-list">

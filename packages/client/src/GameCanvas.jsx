@@ -1,151 +1,34 @@
-// src/GameCanvas.jsx (최종 수정)
+// src/GameCanvas.jsx (리팩토링)
 import { useEffect, useRef } from 'react';
+import {
+  GRID_SIZE,
+  MAP_WIDTH,
+  MAP_HEIGHT,
+  PLAYER_SIZE,
+  ITEM_SIZE,
+  MOVE_DELAY,
+  INGREDIENT_IMAGES,
+  TOOL_IMAGES,
+  INGREDIENT_LEGEND,
+  createZones,
+} from './constants/gameConstants';
+import {
+  isRectIntersect,
+  getFacingInfo,
+  centerItemInZone,
+  centerItemOnGrid,
+  placeItemInFrontOfZone,
+  generateUID,
+} from './utils/gameUtils';
+import { getColorForIngredient, getNameForIngredient } from './utils/ingredientHelpers';
+import { useImageLoader } from './hooks/useImageLoader';
+import { useMultiplayerSync } from './hooks/useMultiplayerSync';
 
 const GameCanvas = ({ selectedChar, isPlaying, onBurgerDelivered, score, isMultiplayer, roomId, socketProp }) => {
   const canvasRef = useRef(null);
-  
-  // 소켓 레퍼런스 (App에서 받은 걸 여기에 저장)
-  const socketRef = useRef(null);
-  
-  // 다른 플레이어들 정보
-  const otherPlayersRef = useRef({});
 
-  // 이미지 캐시
-  const imagesRef = useRef({});
-
-  // --- 상수 설정 ---
-  const GRID_SIZE = 40; 
-  const MAP_WIDTH = 800;  
-  const MAP_HEIGHT = 600; 
-  const PLAYER_SIZE = 60; // 캐릭터 크기 증가 (40 → 60)
-  const ITEM_SIZE = 90; // 재료 이미지 크기 증가 (70 → 90)
-  const MOVE_DELAY = 70; // 이동 딜레이 (ms)
-
-  // --- [재료 이미지 경로 매핑] ---
-  const INGREDIENT_IMAGES = {
-    pistachio: '/assets/ingredients/pistachio_v1.png',
-    peeledPistachio: '/assets/ingredients/pistachio_v2.png',
-    pistachioSpread: '/assets/ingredients/pistachio_spread.png',
-    kadaif: '/assets/ingredients/kadaif.png',
-    kadaif_v1: '/assets/ingredients/kadaif_v1.png', // 집은 카다이프
-    toastedKadaif: '/assets/ingredients/kadaif_toasted.png', // 볶은 카다이프
-    whiteChoco: '/assets/ingredients/white_chocolate.png',
-    meltedWhiteChoco: '/assets/ingredients/white_chocolate_melted.png', // 녹은 화이트초콜릿
-    whiteChoco_pistachio: '/assets/ingredients/whitechocolate_pistachiospread.png', // 화이트초콜릿 + 피스타치오
-    butter: '/assets/ingredients/butter.png',
-    butter_v2: '/assets/ingredients/butter_v2.png', // 집은 버터
-    marshmallow: '/assets/ingredients/marshmallow.png',
-    meltedMarshmallow: '/assets/tools/marshmallow_melted.png', // 녹은 마시멜로우
-    milkPowder: '/assets/ingredients/milk_powder.png',
-    milkPowder_v2: '/assets/ingredients/milk_powder_v2.png', // 집은 탈지분유
-    cocoa: '/assets/ingredients/cocoa_powder.png',
-    cocoa_v2: '/assets/ingredients/cocoa_powder_v2.png', // 집은 코코아파우더
-    filling: '/assets/ingredients/pistachio_spread.png', // 임시로 스프레드 사용
-    hardFilling: '/assets/ingredients/pistachio_spread.png', // 임시로 스프레드 사용
-    dough: '/assets/ingredients/dujjonku.png',
-    panWithDough: '/assets/tools/burner_final.png', // 도우가 든 후라이팬 (완성 상태)
-    finalCookie: '/assets/ingredients/dujjonku_fianl.png',
-    packagedCookie: '/assets/ingredients/dujjonku_fianl.png',
-  };
-
-  // --- [도구 이미지 경로 매핑] ---
-  const TOOL_IMAGES = {
-    fridge: '/assets/tools/freezer.png',      // 냉장고
-    microwave: '/assets/tools/microwave.png',  // 전자레인지
-    fire: '/assets/tools/burner.png',          // 불
-    blend: '/assets/tools/blender_closed.png', // 믹서기
-    peel: '/assets/tools/tray.png',            // 까기
-    package: '/assets/tools/wrapper.png',      // 포장대
-    mix: '/assets/tools/bowl.png',            // 믹싱볼
-  };
-
-  // --- [범례 데이터] ---
-  const INGREDIENT_LEGEND = [
-    { name: '피스타치오', color: '#93C572' },
-    { name: '깐 피스타치오', color: '#90EE90' },
-    { name: '피스타치오 스프레드', color: '#228B22' },
-    { name: '카다이프', color: '#DAA520' },
-    { name: '볶은 카다이프', color: '#CD853F' },
-    { name: '화이트초콜릿', color: '#FAF0E6' },
-    { name: '녹은 화이트초콜릿', color: '#FFFFF0' },
-    { name: '초코+피스타치오 믹스', color: '#9ACD32' },
-    { name: '버터', color: '#F0E68C' },
-    { name: '마시멜로', color: '#FFFAFA' },
-    { name: '녹은 마시멜로', color: '#EEE' },
-    { name: '탈지분유', color: '#FFF8DC' },
-    { name: '코코아파우더', color: '#8B4513' },
-    { name: '속', color: '#ADFF2F' },
-    { name: '굳은 속', color: '#32CD32' },
-    { name: '피', color: '#D2691E' },
-    { name: '두쫀쿠(완성)', color: '#A0522D' },
-    { name: '포장된 두쫀쿠', color: '#FF1493' },
-  ];
-
-  // --- [맵 레이아웃] ---
-  const LAYOUT = [
-    // [상단]
-    { x: 3, y: 0, w: 2, h: 2, label: '', type: 'station', func: 'peel' },
-    { x: 5, y: 0, w: 2, h: 2, label: '', type: 'station', func: 'counter' }, // 조리대 - 트레이와 믹서기 사이
-    { x: 7, y: 0, w: 2, h: 2, label: '', type: 'station', func: 'blend' },
-    { x: 9, y: 0, w: 2, h: 2, label: '', type: 'exit' },
-    { x: 11, y: 0, w: 2, h: 2, label: '', type: 'station', func: 'spread' },
-    { x: 13, y: 0, w: 2, h: 2, label: '', type: 'station', func: 'package' },
-
-    // [왼쪽 재료]
-    { x: 0, y: 3, w: 2, h: 2, label: '', type: 'station', ingredient: 'pistachio' },
-    { x: 0, y: 5, w: 2, h: 2, label: '', type: 'station', ingredient: 'kadaif' },
-    { x: 0, y: 7, w: 2, h: 2, label: '', type: 'station', ingredient: 'whiteChoco' },
-
-    // [오른쪽 재료]
-    { x: 18, y: 3, w: 2, h: 2, label: '', type: 'station', ingredient: 'butter' },
-    { x: 18, y: 5, w: 2, h: 2, label: '', type: 'station', ingredient: 'marshmallow' },
-    { x: 18, y: 7, w: 2, h: 2, label: '', type: 'station', ingredient: 'milkPowder' },
-    { x: 18, y: 9, w: 2, h: 2, label: '', type: 'station', ingredient: 'cocoa' },
-
-    // [하단]
-    { x: 3, y: 13, w: 2, h: 2, label: '', type: 'station', func: 'fridge' },
-    { x: 5, y: 13, w: 2, h: 2, label: '', type: 'station', func: 'microwave' }, 
-    { x: 7, y: 13, w: 2, h: 2, label: '', type: 'station', func: 'mix' },
-    { x: 11, y: 13, w: 2, h: 2, label: '', type: 'station', func: 'fire' },
-    { x: 13, y: 13, w: 2, h: 2, label: '', type: 'station', func: 'fire' },
-  ];
-
-  const ZONES = LAYOUT.map(z => ({
-    ...z,
-    px: z.x * GRID_SIZE,
-    py: z.y * GRID_SIZE,
-    pw: z.w * GRID_SIZE,
-    ph: z.h * GRID_SIZE
-  }));
-
-  // 색상 매핑
-  function getColorForIngredient(name) {
-    const map = {
-        pistachio: '#93C572', kadaif: '#DAA520', kadaif_v1: '#D4AF37', toastedKadaif: '#CD853F', whiteChoco: '#FAF0E6',
-        butter: '#F0E68C', butter_v2: '#FFE87C', marshmallow: '#FFFAFA', 
-        milkPowder: '#FFF8DC', milkPowder_v2: '#FFFACD', 
-        cocoa: '#8B4513', cocoa_v2: '#A0522D',
-        peeledPistachio: '#90EE90', pistachioSpread: '#228B22', meltedWhiteChoco: '#FFFFF0',
-        filling: '#ADFF2F', hardFilling: '#32CD32',
-        meltedMarshmallow: '#EEE', dough: '#D2691E', panWithDough: '#C0C0C0',
-        finalCookie: '#A0522D', packagedCookie: '#FF1493', whiteChoco_pistachio: '#9ACD32',
-    };
-    return map[name] || '#FFF';
-  }
-
-  function getNameForIngredient(id) {
-    const map = {
-        pistachio: '피스타치오', kadaif: '카다이프', kadaif_v1: '집은 카다이프', toastedKadaif: '볶은 카다이프', whiteChoco: '화이트초콜릿',
-        butter: '버터', butter_v2: '집은 버터', marshmallow: '마시멜로', 
-        milkPowder: '탈지분유', milkPowder_v2: '집은 탈지분유',
-        cocoa: '코코아파우더', cocoa_v2: '집은 코코아파우더',
-        peeledPistachio: '깐 피스타치오', pistachioSpread: '피스타치오 스프레드', meltedWhiteChoco: '녹은 화이트초콜릿',
-        filling: '속', hardFilling: '굳은 속',
-        meltedMarshmallow: '녹은 마시멜로', dough: '피', panWithDough: '피든 후라이팬',
-        finalCookie: '두쫀쿠', packagedCookie: '포장된 두쫀쿠', whiteChoco_pistachio: '초코+피스타치오',
-    };
-    return map[id] || id;
-  }
+  // Zones 생성
+  const ZONES = createZones();
 
   // --- [초기화] ---
   const INITIAL_INGREDIENTS = {};
@@ -203,238 +86,15 @@ const GameCanvas = ({ selectedChar, isPlaying, onBurgerDelivered, score, isMulti
     return burnerStatesRef.current[key];
   };
 
-  const isRectIntersect = (r1, r2) => {
-    const r2x = r2.px !== undefined ? r2.px : r2.x;
-    const r2y = r2.py !== undefined ? r2.py : r2.y;
-    const r2w = r2.pw !== undefined ? r2.pw : r2.w;
-    const r2h = r2.ph !== undefined ? r2.ph : r2.h;
-    return !(r2x > r1.x + r1.w || r2x + r2w < r1.x || r2y > r1.y + r1.h || r2y + r2h < r1.y);
-  };
-  
-  const getFacingInfo = (player, useWideRange = false) => {
-      let targetX = player.x;
-      let targetY = player.y;
-
-      if (player.direction === 'up') targetY -= GRID_SIZE;
-      else if (player.direction === 'down') targetY += GRID_SIZE;
-      else if (player.direction === 'left') targetX -= GRID_SIZE;
-      else if (player.direction === 'right') targetX += GRID_SIZE;
-
-      // 기본은 작은 범위, 필요시 넓은 범위 사용
-      const checkRect = useWideRange 
-        ? { x: targetX, y: targetY, w: GRID_SIZE, h: GRID_SIZE }
-        : { x: targetX + 10, y: targetY + 10, w: 20, h: 20 };
-      
-      // 여러 zone이 감지되면 중앙에서 가장 가까운 것 선택
-      const matchingZones = ZONES.filter(z => isRectIntersect(checkRect, z));
-      let zone = null;
-      
-      if (matchingZones.length > 0) {
-        // 바라보는 칸의 중앙 좌표
-        const centerX = targetX + GRID_SIZE / 2;
-        const centerY = targetY + GRID_SIZE / 2;
-        
-        // 가장 가까운 zone 찾기
-        zone = matchingZones.reduce((closest, current) => {
-          const currentCenterX = current.px + current.pw / 2;
-          const currentCenterY = current.py + current.ph / 2;
-          const currentDist = Math.hypot(centerX - currentCenterX, centerY - currentCenterY);
-          
-          const closestCenterX = closest.px + closest.pw / 2;
-          const closestCenterY = closest.py + closest.ph / 2;
-          const closestDist = Math.hypot(centerX - closestCenterX, centerY - closestCenterY);
-          
-          return currentDist < closestDist ? current : closest;
-        });
-      }
-
-      return { zone, rect: checkRect, x: targetX, y: targetY };
-  };
-
-  const centerItemInZone = (item, zone) => {
-      item.x = zone.px + (zone.pw - item.w) / 2;
-      item.y = zone.py + (zone.ph - item.h) / 2;
-  };
-  const centerItemOnGrid = (item, gridX, gridY) => {
-      item.x = gridX + (GRID_SIZE - item.w) / 2;
-      item.y = gridY + (GRID_SIZE - item.h) / 2;
-  };
-  
-  // processing이 끝난 아이템을 zone 앞쪽으로 배치 (캐릭터가 집기 쉬운 위치)
-  const placeItemInFrontOfZone = (item, zone) => {
-      // zone의 중앙 좌표
-      const zoneCenterX = zone.px + zone.pw / 2;
-      const zoneCenterY = zone.py + zone.ph / 2;
-      
-      // 캔버스 중앙 좌표
-      const canvasCenterX = CANVAS_WIDTH / 2;
-      const canvasCenterY = CANVAS_HEIGHT / 2;
-      
-      // zone 앞 1칸에 배치 (캐릭터와 zone 사이에 배치되도록)
-      if (zoneCenterY < canvasCenterY / 2) {
-          // 상단 zone -> 아이템을 1칸 아래에 배치
-          item.x = zoneCenterX - item.w / 2;
-          item.y = zone.py + zone.ph + GRID_SIZE / 2; // zone과 캐릭터 중간
-      } else if (zoneCenterY > canvasCenterY * 1.5) {
-          // 하단 zone (전자레인지 등) -> 아이템을 1칸 위에 배치
-          item.x = zoneCenterX - item.w / 2;
-          item.y = zone.py - GRID_SIZE + (GRID_SIZE - item.h) / 2; // zone 바로 앞 칸 중앙
-      } else if (zoneCenterX < canvasCenterX) {
-          // 좌측 zone -> 아이템을 1칸 오른쪽에 배치
-          item.x = zone.px + zone.pw + GRID_SIZE / 2; // zone과 캐릭터 중간
-          item.y = zoneCenterY - item.h / 2;
-      } else {
-          // 우측 zone -> 아이템을 1칸 왼쪽에 배치
-          item.x = zone.px - GRID_SIZE + (GRID_SIZE - item.w) / 2; // zone 바로 앞 칸 중앙
-          item.y = zoneCenterY - item.h / 2;
-      }
-  };
-
-  // ★ [핵심 수정: 소켓 연결]
-  useEffect(() => {
-    if (!isMultiplayer || !socketProp) return;
-
-    // ★ App에서 받은 소켓을 그대로 씁니다. (새로 연결 X, joinRoom X)
-    socketRef.current = socketProp;
-    const socket = socketRef.current;
-
-    // 1. 게임 화면 로딩되자마자 "현재 방 상황 알려줘!" 요청
-    socket.emit('syncGame'); 
-
-    // 2. 누가 움직였을 때 처리 (★ 여기가 문제였음!)
-    const handlePlayerMoved = (data) => {
-      const { id, x, y, direction } = data;
-      
-      // 내 목록에 없는 사람이면? -> 새로 추가! (기존엔 무시했음)
-      if (!otherPlayersRef.current[id]) {
-        otherPlayersRef.current[id] = data; // 전체 데이터 저장 (nickname, color 포함됨)
-      } else {
-        // 이미 있으면? -> 위치만 업데이트
-        otherPlayersRef.current[id].x = x;
-        otherPlayersRef.current[id].y = y;
-        otherPlayersRef.current[id].direction = direction;
-      }
-    };
-
-    const handleNewPlayer = ({ id, player }) => {
-      // 이미 있으면 덮어쓰기
-      otherPlayersRef.current[id] = player;
-    };
-
-    const handlePlayerDisconnected = (id) => {
-      delete otherPlayersRef.current[id];
-    };
-    
-    // 방 업데이트(입장 시 기존 플레이어 목록 등)
-    const handleRoomUpdate = (roomPlayers) => {
-        otherPlayersRef.current = roomPlayers;
-    };
-
-    const handleUpdateFireState = (data) => {
-       // data: { isOn, isPressing, turnOffTime ... }
-       fireRef.current = { ...fireRef.current, ...data };
-    };
-
-    socket.on("playerMoved", handlePlayerMoved);
-    socket.on("newPlayer", handleNewPlayer);
-    socket.on("playerDisconnected", handlePlayerDisconnected);
-    socket.on("roomUpdate", handleRoomUpdate);
-    socket.on("updateFireState", handleUpdateFireState);
-
-    // ★ [NEW] 다른 사람이 아이템을 건드리면 내 화면에도 반영
-    const handleUpdateItemState = (itemData) => {
-        // 1. 이미 있는 아이템인지 찾기
-        let item = cookedItemsRef.current.find(i => i.uid === itemData.uid);
-        
-        // 2. 없으면? (새로 꺼낸 재료라면) -> 새로 만듦
-        if (!item) {
-            item = { ...itemData }; // 받은 데이터 그대로 생성
-            cookedItemsRef.current.push(item);
-        } else {
-        // 3. 있으면? -> 상태 덮어쓰기 (위치, 상태, 누가 들고있는지 등)
-            Object.assign(item, itemData);
-
-            if (itemData.status === 'held' && itemData.holderId !== socket.id) {
-            // 혹시 내가 들고 있었다면 놓게 만듦 (동시 집기 방지)
-                if (playerRef.current.holding === item.uid) {
-                    playerRef.current.holding = null;
-                }
-            }
-        }
-    };
-
-    // ★ [NEW] 아이템 삭제 신호 처리
-  const handleRemoveItem = (uid) => {
-    // 해당 uid를 가진 아이템을 목록에서 제거
-    const idx = cookedItemsRef.current.findIndex(i => i.uid === uid);
-    if (idx > -1) {
-      cookedItemsRef.current.splice(idx, 1);
-    }
-  };
-
-    socket.on("roomUpdate", handleRoomUpdate);
-    socket.on("updateItemState", handleUpdateItemState);
-    socket.on("removeItem", handleRemoveItem); // 리스너 등록
-
-    // ★ 정리: 리스너만 끕니다. (소켓 연결은 끊지 않음!)
-    return () => {
-      socket.off("playerMoved", handlePlayerMoved);
-      socket.off("newPlayer", handleNewPlayer);
-      socket.off("playerDisconnected", handlePlayerDisconnected);
-      socket.off("roomUpdate", handleRoomUpdate);
-      socket.off("updateItemState", handleUpdateItemState);
-      socket.off("removeItem", handleRemoveItem);
-      socket.off("updateFireState", handleUpdateFireState);
-    };
-  }, [isMultiplayer, socketProp]);
-
-  // --- [이미지 로드] ---
-  useEffect(() => {
-    // 재료 이미지 로드
-    Object.entries(INGREDIENT_IMAGES).forEach(([key, src]) => {
-      const img = new Image();
-      img.src = src;
-      img.onload = () => {
-        // 이미지 로드 완료, 자동으로 다음 프레임에 렌더링됨
-      };
-      img.onerror = () => {
-        console.warn(`이미지 로드 실패: ${src}`);
-      };
-      imagesRef.current[key] = img;
-    });
-
-    // 도구 이미지 로드
-    Object.entries(TOOL_IMAGES).forEach(([key, src]) => {
-      const img = new Image();
-      img.src = src;
-      img.onload = () => {
-        // 이미지 로드 완료
-      };
-      img.onerror = () => {
-        console.warn(`도구 이미지 로드 실패: ${src}`);
-      };
-      imagesRef.current[`tool_${key}`] = img;
-    });
-
-    // 캐릭터 이미지 로드 (방향별로 4개)
-    if (selectedChar) {
-      const directions = ['front', 'back', 'left', 'right'];
-      directions.forEach(dir => {
-        const imgKey = `img${dir.charAt(0).toUpperCase() + dir.slice(1)}`;
-        if (selectedChar[imgKey]) {
-          const charImg = new Image();
-          charImg.src = selectedChar[imgKey];
-          charImg.onload = () => {
-            // 이미지 로드 완료
-          };
-          charImg.onerror = () => {
-            console.warn(`캐릭터 이미지 로드 실패: ${selectedChar[imgKey]}`);
-          };
-          imagesRef.current[`playerChar_${dir}`] = charImg;
-        }
-      });
-    }
-  }, [selectedChar]);
+  // 커스텀 훅 사용
+  const imagesRef = useImageLoader(selectedChar);
+  const { socketRef, otherPlayersRef } = useMultiplayerSync(
+    isMultiplayer,
+    socketProp,
+    playerRef,
+    fireRef,
+    cookedItemsRef
+  );
 
   // --- [게임 루프 및 로직] ---
   useEffect(() => {
@@ -533,7 +193,7 @@ const GameCanvas = ({ selectedChar, isPlaying, onBurgerDelivered, score, isMulti
       const fire = fireRef.current;
       
       // 1. 내가 불을 쳐다보고 있는지 확인 (facingZone 활용)
-      const { zone: facingZone } = getFacingInfo(player);
+      const { zone: facingZone } = getFacingInfo(player, ZONES);
       const isFacingFire = facingZone && facingZone.func === 'fire';
 
       if (isFacingFire) {
@@ -658,7 +318,7 @@ const GameCanvas = ({ selectedChar, isPlaying, onBurgerDelivered, score, isMulti
         
         if (droppedItem) {
             // 아이템을 놓을 때는 넓은 범위로 zone 체크
-            const { zone: facingZone, x: facingX, y: facingY } = getFacingInfo(player, true);
+            const { zone: facingZone, x: facingX, y: facingY } = getFacingInfo(player, ZONES, true);
 
             if (facingZone) {
                 if (facingZone.type === 'wall' || facingZone.ingredient) {
@@ -749,7 +409,7 @@ const GameCanvas = ({ selectedChar, isPlaying, onBurgerDelivered, score, isMulti
       // Pickup
       if (!player.holding && isSpacePressed) {
         // 재료 칸 감지를 위해 넓은 범위로 zone 체크
-        const { zone: facingZone } = getFacingInfo(player, true);
+        const { zone: facingZone } = getFacingInfo(player, ZONES, true);
         
         // 믹서기가 ready 상태면 pistachioSpread 꺼내기
         if (facingZone && facingZone.func === 'blend' && blenderRef.current.state === 'ready') {
