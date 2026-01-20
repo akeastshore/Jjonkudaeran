@@ -26,6 +26,7 @@ import { useMultiplayerSync } from './hooks/useMultiplayerSync';
 import { usePlayerControls } from './hooks/usePlayerControls';
 import { spawnItem, checkRecipe, getBurnerState as getBurnerStateUtil } from './utils/gameMechanics';
 import { updateMovement as updatePlayerMovement } from './utils/playerMovement';
+import { createDrawFunction } from './utils/gameRenderer';
 
 const GameCanvas = ({ selectedChar, isPlaying, onBurgerDelivered, score, isMultiplayer, roomId, socketProp }) => {
   const canvasRef = useRef(null);
