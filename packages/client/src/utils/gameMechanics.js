@@ -1,39 +1,55 @@
 import { ITEM_SIZE } from '../constants/gameConstants';
 import { getColorForIngredient, getNameForIngredient } from './ingredientHelpers';
-import { generateUID } from './gameUtils';
+import { isRectIntersect, centerItemInZone } from './gameUtils';
 
-// 아이템 생성 함수
-export const spawnItem = (id, zone) => {
-  return {
-    id,
-    uid: generateUID(),
-    x: zone.px + zone.pw/2 - ITEM_SIZE/2,
-    y: zone.py + zone.ph/2 - ITEM_SIZE/2,
-    w: ITEM_SIZE,
-    h: ITEM_SIZE,
-    color: getColorForIngredient(id),
-    status: 'placed',
-    name: getNameForIngredient(id)
+// 아이템 생성 함수 (멀티플레이어 지원)
+export const createSpawnItemFunction = (cookedItemsRef, isMultiplayer, socketRef) => {
+  return (id, zone) => {
+    const newItem = {
+      id: id,
+      uid: `${id}_${Date.now()}_${Math.random()}`,
+      x: 0, y: 0, 
+      w: ITEM_SIZE, 
+      h: ITEM_SIZE,
+      color: getColorForIngredient(id),
+      status: 'ground',
+      name: getNameForIngredient(id)
+    };
+    centerItemInZone(newItem, zone);
+    cookedItemsRef.current.push(newItem);
+    
+    if (isMultiplayer && socketRef.current) {
+      socketRef.current.emit('updateItemState', newItem);
+    }
+    
+    return newItem;
   };
 };
 
-// 레시피 체크 함수
-export const checkRecipe = (zone, ingredients, outputId, recipeIds) => {
-  const found = ingredients.filter(item => {
-    if (item.status === 'held') return false;
-    const dx = item.x - (zone.px + zone.pw/2);
-    const dy = item.y - (zone.py + zone.ph/2);
-    const dist = Math.sqrt(dx*dx + dy*dy);
-    return dist < 50 && recipeIds.includes(item.id);
-  });
-  
-  if (found.length === recipeIds.length) {
-    const allMatch = recipeIds.every(rid => found.some(f => f.id === rid));
-    if (allMatch) {
-      return { matches: true, items: found };
+// 레시피 체크 함수 (멀티플레이어 지원)
+export const createCheckRecipeFunction = (cookedItemsRef, isMultiplayer, socketRef, spawnItem) => {
+  return (zone, ingredients, outputId, recipeIds) => {
+    const itemsInZone = ingredients.filter(item => 
+      (item.status === 'cooking' || item.status === 'ground') &&
+      isRectIntersect({x:item.x, y:item.y, w:item.w, h:item.h}, zone)
+    );
+
+    const foundItems = recipeIds.map(reqId => itemsInZone.find(i => i.id === reqId));
+    
+    if (foundItems.every(i => i !== undefined)) {
+      foundItems.forEach(item => {
+        const idx = cookedItemsRef.current.indexOf(item);
+        if (idx > -1) cookedItemsRef.current.splice(idx, 1);
+        
+        if (isMultiplayer && socketRef.current) {
+          socketRef.current.emit('removeItem', item.uid);
+        }
+      });
+      spawnItem(outputId, zone);
+      return true;
     }
-  }
-  return { matches: false, items: [] };
+    return false;
+  };
 };
 
 // 버너 상태 가져오기 헬퍼
