@@ -64,10 +64,10 @@ const ResultScreen = ({
   return (
     <div className="result-screen">
       <div className="result-container">
-        <h1 className="result-title">영업 종료!</h1>
+
 
         {/* 두쫀쿠 이미지 슬롯 */}
-        <div className="result-dujjonku">
+        <div className="result-dujjonku" style={gameMode === 'multi' ? { top: '200px' } : {}}>
           {Array.from({ length: 3 }).map((_, idx) => (
             <div key={idx} className="dujjonku-slot">
               {idx < dujjonkuCount ? (
@@ -85,7 +85,7 @@ const ResultScreen = ({
         </div>
 
         {/* 2. "영업 종료!" 타이틀을 여기로 이동 (캐릭터 바로 위) */}
-        <h1 className="result-title">영업 종료!</h1>
+        <h1 className="result-title" style={gameMode !== 'multi' ? { left: '10%' } : {}}>영업 종료!</h1>
 
         {/* 3. 캐릭터 이미지 */}
         <div className="result-character">
@@ -121,17 +121,22 @@ const ResultScreen = ({
         )}
 
         {/* 액션 버튼 */}
-        <div className="result-actions">
+        <div className="result-actions" style={gameMode === 'multi' ? { bottom: '23%', left: '71%' } : {}}>
           <button
             className={`result-btn ${amIVoted ? 'btn-cancel' : 'btn-restart'}`}
             onClick={onRestart}
+            style={gameMode === 'multi' ? { padding: '12px 30px', fontSize: '20px', margin: '0 5px' } : {}}
           >
             {gameMode === 'multi'
               ? (amIVoted ? '다시 하기 취소' : '다시 하러가기')
               : '다시 하기'}
           </button>
 
-          <button className="result-btn btn-home" onClick={onGoHome}>
+          <button
+            className="result-btn btn-home"
+            onClick={onGoHome}
+            style={gameMode === 'multi' ? { padding: '12px 30px', fontSize: '20px', margin: '0 5px' } : {}}
+          >
             홈으로
           </button>
         </div>
