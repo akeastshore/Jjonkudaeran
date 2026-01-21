@@ -72,9 +72,10 @@ const ResultScreen = ({
             <div key={idx} className="dujjonku-slot">
               {idx < dujjonkuCount ? (
                 <img
-                  src="/assets/ingredients/dujjonku_fianl.png"
+                  src='/assets/ingredients/wrapped_dujjonku.png'
                   alt="두쫀쿠"
                   className="dujjonku-img"
+                  style={{ width: '350px', height: '350px' }}
                 />
               ) : (
                 <div className="dujjonku-empty" />
@@ -83,7 +84,10 @@ const ResultScreen = ({
           ))}
         </div>
 
-        {/* 왼쪽: 캐릭터 */}
+        {/* 2. "영업 종료!" 타이틀을 여기로 이동 (캐릭터 바로 위) */}
+        <h1 className="result-title">영업 종료!</h1>
+
+        {/* 3. 캐릭터 이미지 */}
         <div className="result-character">
           {selectedChar && (
             <img

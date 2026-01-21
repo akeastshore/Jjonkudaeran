@@ -5,7 +5,8 @@ export const useMultiplayerSync = (
   socketProp,
   playerRef,
   fireRef,
-  cookedItemsRef
+  cookedItemsRef,
+  burnerStatesRef
 ) => {
   const socketRef = useRef(null);
   const otherPlayersRef = useRef({});
@@ -22,7 +23,7 @@ export const useMultiplayerSync = (
     // 플레이어 이동 처리
     const handlePlayerMoved = (data) => {
       const { id, x, y, direction } = data;
-      
+
       if (!otherPlayersRef.current[id]) {
         otherPlayersRef.current[id] = data;
       } else {
@@ -46,7 +47,7 @@ export const useMultiplayerSync = (
 
     const handleUpdateItemState = (itemData) => {
       let item = cookedItemsRef.current.find(i => i.uid === itemData.uid);
-      
+
       if (!item) {
         item = { ...itemData };
         cookedItemsRef.current.push(item);
@@ -68,6 +69,17 @@ export const useMultiplayerSync = (
       }
     };
 
+    const handleUpdateBurnerState = (burnerData) => {
+      // x, y를 이용해 키 생성
+      const key = `${burnerData.x}_${burnerData.y}`;
+      if (!burnerStatesRef.current[key]) {
+        burnerStatesRef.current[key] = { ...burnerData };
+      } else {
+        // 기존 상태 업데이트
+        Object.assign(burnerStatesRef.current[key], burnerData);
+      }
+    };
+
     // 리스너 등록
     socket.on("playerMoved", handlePlayerMoved);
     socket.on("newPlayer", handleNewPlayer);
@@ -75,6 +87,7 @@ export const useMultiplayerSync = (
     socket.on("updateItemState", handleUpdateItemState);
     socket.on("removeItem", handleRemoveItem);
     socket.on("updateFireState", handleUpdateFireState);
+    socket.on("updateBurnerState", handleUpdateBurnerState);
 
     // 정리
     return () => {
@@ -84,8 +97,9 @@ export const useMultiplayerSync = (
       socket.off("updateItemState", handleUpdateItemState);
       socket.off("removeItem", handleRemoveItem);
       socket.off("updateFireState", handleUpdateFireState);
+      socket.off("updateBurnerState", handleUpdateBurnerState);
     };
-  }, [isMultiplayer, socketProp, playerRef, fireRef, cookedItemsRef]);
+  }, [isMultiplayer, socketProp, playerRef, fireRef, cookedItemsRef, burnerStatesRef]);
 
   return { socketRef, otherPlayersRef };
 };

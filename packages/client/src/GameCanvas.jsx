@@ -68,7 +68,8 @@ const GameCanvas = ({
     socketProp,
     playerRef,
     fireRef,
-    cookedItemsRef
+    cookedItemsRef,
+    burnerStatesRef
   );
   usePlayerControls(keysRef);
 

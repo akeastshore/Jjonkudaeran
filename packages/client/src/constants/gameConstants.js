@@ -5,6 +5,7 @@ export const MAP_HEIGHT = 600;
 export const PLAYER_SIZE = 80;
 export const ITEM_SIZE = 100;
 export const MOVE_DELAY = 70;
+export const GAME_DURATION = 180;
 
 // 재료 이미지 경로 매핑
 export const INGREDIENT_IMAGES = {

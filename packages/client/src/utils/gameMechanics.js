@@ -8,8 +8,8 @@ export const createSpawnItemFunction = (cookedItemsRef, isMultiplayer, socketRef
     const newItem = {
       id: id,
       uid: `${id}_${Date.now()}_${Math.random()}`,
-      x: 0, y: 0, 
-      w: ITEM_SIZE, 
+      x: 0, y: 0,
+      w: ITEM_SIZE,
       h: ITEM_SIZE,
       color: getColorForIngredient(id),
       status: 'ground',
@@ -17,11 +17,11 @@ export const createSpawnItemFunction = (cookedItemsRef, isMultiplayer, socketRef
     };
     centerItemInZone(newItem, zone);
     cookedItemsRef.current.push(newItem);
-    
+
     if (isMultiplayer && socketRef.current) {
       socketRef.current.emit('updateItemState', newItem);
     }
-    
+
     return newItem;
   };
 };
@@ -29,18 +29,18 @@ export const createSpawnItemFunction = (cookedItemsRef, isMultiplayer, socketRef
 // 레시피 체크 함수 (멀티플레이어 지원)
 export const createCheckRecipeFunction = (cookedItemsRef, isMultiplayer, socketRef, spawnItem) => {
   return (zone, ingredients, outputId, recipeIds) => {
-    const itemsInZone = ingredients.filter(item => 
-      (item.status === 'cooking' || item.status === 'ground') &&
-      isRectIntersect({x:item.x, y:item.y, w:item.w, h:item.h}, zone)
+    const itemsInZone = ingredients.filter(item =>
+      (item.status === 'cooking' || item.status === 'ground' || item.status === 'placed') &&
+      isRectIntersect({ x: item.x, y: item.y, w: item.w, h: item.h }, zone)
     );
 
     const foundItems = recipeIds.map(reqId => itemsInZone.find(i => i.id === reqId));
-    
+
     if (foundItems.every(i => i !== undefined)) {
       foundItems.forEach(item => {
         const idx = cookedItemsRef.current.indexOf(item);
         if (idx > -1) cookedItemsRef.current.splice(idx, 1);
-        
+
         if (isMultiplayer && socketRef.current) {
           socketRef.current.emit('removeItem', item.uid);
         }

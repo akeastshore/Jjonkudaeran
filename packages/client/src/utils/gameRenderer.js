@@ -80,6 +80,13 @@ export const createDrawFunction = (
         }
       }
 
+      // 제출구 텍스트 추가
+      if (zone.type === 'exit') {
+        ctx.fillStyle = 'white';
+        ctx.font = 'bold 20px Arial';
+        ctx.fillText('제출구', zone.px + zone.pw / 2, zone.py + zone.ph / 2);
+      }
+
       // (2) 도구 이미지 (여기서 화덕/Burner가 1차로 그려짐)
       if (zone.func && TOOL_IMAGES[zone.func]) {
         let toolImgSrc = TOOL_IMAGES[zone.func];
@@ -244,19 +251,12 @@ export const createDrawFunction = (
 
       // 타이머 표시
       if (zone.func === 'blend') {
-        const processingItem = cookedItemsRef.current.find(item => {
-          if (item.status !== 'processing') return false;
-          const r1 = { x: item.x, y: item.y, w: item.w, h: item.h };
-          const r2 = zone;
-          return !(r2.px > r1.x + r1.w || r2.px + r2.pw < r1.x || r2.py > r1.y + r1.h || r2.py + r2.ph < r1.y);
-        });
-
-        if (processingItem) {
+        if (blenderRef.current.state === 'processing') {
           ctx.fillStyle = 'white';
           ctx.strokeStyle = 'black';
           ctx.lineWidth = 3;
           ctx.font = 'bold 20px Arial';
-          const remain = Math.ceil((processingItem.finishTime - Date.now()) / 1000);
+          const remain = Math.ceil((blenderRef.current.finishTime - Date.now()) / 1000);
           const timerX = zone.px + zone.pw / 2;
           const timerY = zone.py + zone.ph / 2;
           ctx.strokeText(`${remain}s`, timerX, timerY);
@@ -271,6 +271,43 @@ export const createDrawFunction = (
         ctx.fillRect(zone.px + 5, zone.py + zone.ph - 8, (zone.pw - 10) * progress, 5);
         ctx.strokeStyle = 'black';
         ctx.strokeRect(zone.px + 5, zone.py + zone.ph - 8, zone.pw - 10, 5);
+      }
+
+      // 화덕 메시지 표시 (탔을 때)
+      if (zone.func === 'fire') {
+        const burner = getBurnerState(zone);
+        const now = Date.now();
+
+        // 메시지가 있고, 2초(2000ms)가 아직 안 지났다면 그리기
+        if (burner.message && (now - burner.messageStartTime < 2000)) {
+
+          // 1. 진행률 계산 (0.0 ~ 1.0)
+          // 시간이 지날수록 0에서 1에 가까워집니다.
+          const elapsed = now - burner.messageStartTime;
+          const progress = elapsed / 2000;
+
+          // 2. 위로 올라가는 거리 계산 (총 50px만큼 위로 이동)
+          // 시작 위치(-20)에서 시간이 지날수록 더 위(-20 - 50)로 갑니다.
+          const moveUpDistance = 50;
+          const yOffset = 10 + (moveUpDistance * progress);
+
+          // 3. 투명도 적용 (점점 투명해지게)
+          // progress가 1이 되면(2초 끝), alpha는 0(완전 투명)이 됩니다.
+          const alpha = 1 - progress;
+
+          // --- 그리기 시작 ---
+          ctx.save(); // 다른 그림에 영향 안 주게 설정 저장
+          ctx.globalAlpha = alpha; // 투명도 적용
+
+          ctx.fillStyle = 'red';
+          ctx.font = 'bold 18px Arial';
+          ctx.textAlign = 'center'; // 좌우 가운데 정렬 확실하게
+
+          // zone.py - yOffset : 시간이 지날수록 Y값이 작아져서 위로 올라감
+          ctx.fillText(burner.message, zone.px + zone.pw / 2, zone.py - yOffset);
+
+          ctx.restore(); // 설정 복구 (중요!)
+        }
       }
     });
 
