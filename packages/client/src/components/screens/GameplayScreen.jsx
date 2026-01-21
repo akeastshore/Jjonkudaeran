@@ -2,6 +2,8 @@
 import GameCanvas from '../../GameCanvas';
 import { INGREDIENT_IMAGES } from '../../constants/gameConstants';
 
+import choiceBg from '../../assets/backgrounds/choice_bg.png';
+
 const GameplayScreen = ({
   username,
   timeLeft,
@@ -15,7 +17,17 @@ const GameplayScreen = ({
   countDown
 }) => {
   return (
-    <div className="game-screen-wrapper" style={{ position: 'relative' }}>
+    <div className="game-screen-wrapper" style={{
+      position: 'relative',
+      backgroundImage: `linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.5)), url(${choiceBg})`,
+      backgroundSize: 'cover',
+      backgroundPosition: 'center',
+      minHeight: '100vh',
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      justifyContent: 'center'
+    }}>
       {/* 상단 정보 바 */}
       <div style={{
         display: 'flex',

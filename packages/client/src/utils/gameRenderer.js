@@ -25,11 +25,21 @@ export const createDrawFunction = (
     const ctx = canvasRef.current.getContext('2d', { alpha: false });
 
     // 1. 배경
-    for (let row = 0; row < MAP_HEIGHT / GRID_SIZE; row++) {
-      for (let col = 0; col < MAP_WIDTH / GRID_SIZE; col++) {
-        const isEven = (row + col) % 2 === 0;
-        ctx.fillStyle = isEven ? '#A8C5B0' : '#F5E6D3';
-        ctx.fillRect(col * GRID_SIZE, row * GRID_SIZE, GRID_SIZE, GRID_SIZE);
+    // 1. 배경
+    const bgImg = imagesRef.current['gameBackground'];
+    if (bgImg && bgImg.complete && bgImg.naturalHeight !== 0) {
+      ctx.drawImage(bgImg, 0, 0, MAP_WIDTH, MAP_HEIGHT);
+      // 배경 어둡게 처리
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+      ctx.fillRect(0, 0, MAP_WIDTH, MAP_HEIGHT);
+    } else {
+      // 이미지 로드 전 임시 배경 (체커보드)
+      for (let row = 0; row < MAP_HEIGHT / GRID_SIZE; row++) {
+        for (let col = 0; col < MAP_WIDTH / GRID_SIZE; col++) {
+          const isEven = (row + col) % 2 === 0;
+          ctx.fillStyle = isEven ? '#A8C5B0' : '#F5E6D3';
+          ctx.fillRect(col * GRID_SIZE, row * GRID_SIZE, GRID_SIZE, GRID_SIZE);
+        }
       }
     }
 

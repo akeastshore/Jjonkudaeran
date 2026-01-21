@@ -39,18 +39,34 @@ const ResultScreen = ({
 
   // 두쫀쿠 개수 계산
   const playerCount = gameMode === 'multi' ? Object.keys(roomPlayers).length : 1;
-  const baseScore = playerCount * 2;
-  let dujjonkuCount = 0;
+  // 두쫀쿠 개수 계산 (1개: 하, 2개: 중, 3개: 상)
+  // const playerCount = gameMode === 'multi' ? Object.keys(roomPlayers).length : 1; (Already declared above)
+  let dujjonkuCount = 1; // 기본 1개부터 시작 (이하 조건 때문)
 
-  if (score >= baseScore) {
-    dujjonkuCount = Math.min(3, score - baseScore + 1);
+  if (playerCount === 1) {
+    if (score <= 2) dujjonkuCount = 1;
+    else if (score === 3) dujjonkuCount = 2;
+    else if (score >= 4) dujjonkuCount = 3;
+  } else if (playerCount === 2) {
+    if (score <= 4) dujjonkuCount = 1;
+    else if (score === 5) dujjonkuCount = 2;
+    else if (score >= 6) dujjonkuCount = 3;
+  } else if (playerCount === 3) {
+    if (score <= 5) dujjonkuCount = 1;
+    else if (score === 6) dujjonkuCount = 2;
+    else if (score >= 7) dujjonkuCount = 3;
+  } else if (playerCount >= 4) {
+    if (score <= 6) dujjonkuCount = 1;
+    else if (score === 7) dujjonkuCount = 2;
+    else if (score >= 8) dujjonkuCount = 3;
   }
 
   return (
     <div className="result-screen">
       <div className="result-container">
+        <h1 className="result-title">영업 종료!</h1>
 
-        {/* 1. 두쫀쿠 이미지를 가장 위로 올림 (순서 변경) */}
+        {/* 두쫀쿠 이미지 슬롯 */}
         <div className="result-dujjonku">
           {Array.from({ length: 3 }).map((_, idx) => (
             <div key={idx} className="dujjonku-slot">

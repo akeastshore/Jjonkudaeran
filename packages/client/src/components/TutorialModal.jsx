@@ -79,14 +79,35 @@ const TutorialModal = ({ isOpen, onClose }) => {
     {
       title: '4) 합체(완성)',
       images: {
-        right: { src: '/assets/ingredients/dujjonku_final.png', size: 'large' }
+        left: { src: '/assets/ingredients/dujjonku_final.png', size: 'large' },
+        right: { src: '/assets/ingredients/wrapped_dujjonku.png', size: 'large' }
       },
       content: (
         <ol>
           <li>냉동고에서 속을 꺼낸다</li>
           <li>속을 한 개씩 집어서 피로 감싼다</li>
-          <li>마지막으로 코코아파우더를 묻힌다 → <b>완성!</b></li>
+          <li>코코아파우더를 묻힌다</li>
+          <li>포장한다 → <b>완성!</b></li>
         </ol>
+      )
+    },
+    {
+      title: '!주의사항!',
+      content: (
+        <ul>
+          <li>재료들(마시멜로우, 버터, 카다이프)을 불에 오래 올려두면 타요 🔥</li>
+          <li>재료들을 잘못된 위치에 두면 사라져요 💨</li>
+        </ul>
+      )
+    },
+    {
+      title: '🎯 점수 기준 🎯',
+      content: (
+        <ul>
+          <li>상: 1인 - 4개 이상, 2인 - 6개 이상, 3인 - 7개 이상, 4인 - 8개 이상</li>
+          <li>중: 1인 - 3개, 2인 - 5개, 3인 - 6개, 4인 - 7개</li>
+          <li>하: 1인 - 2개 이하, 2인 - 4개 이하, 3인 - 5개 이하, 4인 - 6개 이하</li>
+        </ul>
       )
     }
   ];
