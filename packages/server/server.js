@@ -174,8 +174,6 @@ io.on('connection', (socket) => {
       // 상태 토글 (누르면 켜지고, 다시 누르면 꺼짐)
       p.wantsRestart = !p.wantsRestart;
       
-      console.log(`🔄 [재도전 투표] ${p.nickname} (${socket.id}): wantsRestart = ${p.wantsRestart}`);
-      
       const roomId = p.roomId;
       
       // 방 사람들에게 상태 업데이트 (화면에 누가 눌렀는지 보여주기 위해)
@@ -192,7 +190,7 @@ io.on('connection', (socket) => {
            ids.forEach(id => {
              if (players[id]) {
                 players[id].wantsRestart = false;
-                players[id].isReady = false; // (선택사항) 로비 준비 상태도 초기화
+                players[id].isReady = false;
              }
            });
            
@@ -271,9 +269,6 @@ io.on('connection', (socket) => {
     if (roomSockets) {
         roomSockets.forEach(id => { if (players[id]) roomPlayers[id] = players[id]; });
     }
-    console.log(`📢 [broadcastRoomUpdate] 방 ${roomId}에 업데이트 전송:`, 
-      Object.values(roomPlayers).map(p => ({ nickname: p.nickname, wantsRestart: p.wantsRestart }))
-    );
     io.to(roomId).emit('roomUpdate', roomPlayers);
   }
 

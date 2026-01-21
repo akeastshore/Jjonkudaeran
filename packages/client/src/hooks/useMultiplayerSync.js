@@ -39,10 +39,6 @@ export const useMultiplayerSync = (
     const handlePlayerDisconnected = (id) => {
       delete otherPlayersRef.current[id];
     };
-    
-    const handleRoomUpdate = (roomPlayers) => {
-      otherPlayersRef.current = roomPlayers;
-    };
 
     const handleUpdateFireState = (data) => {
       fireRef.current = { ...fireRef.current, ...data };
@@ -76,7 +72,6 @@ export const useMultiplayerSync = (
     socket.on("playerMoved", handlePlayerMoved);
     socket.on("newPlayer", handleNewPlayer);
     socket.on("playerDisconnected", handlePlayerDisconnected);
-    socket.on("roomUpdate", handleRoomUpdate);
     socket.on("updateItemState", handleUpdateItemState);
     socket.on("removeItem", handleRemoveItem);
     socket.on("updateFireState", handleUpdateFireState);
@@ -86,7 +81,6 @@ export const useMultiplayerSync = (
       socket.off("playerMoved", handlePlayerMoved);
       socket.off("newPlayer", handleNewPlayer);
       socket.off("playerDisconnected", handlePlayerDisconnected);
-      socket.off("roomUpdate", handleRoomUpdate);
       socket.off("updateItemState", handleUpdateItemState);
       socket.off("removeItem", handleRemoveItem);
       socket.off("updateFireState", handleUpdateFireState);

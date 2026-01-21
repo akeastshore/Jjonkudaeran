@@ -239,6 +239,7 @@ button:hover {
 
 /* 중앙 가독성용 오버레이 (배경 난잡해 보이는 거 방지) */
 .multiplayer-page::before{
+  pointer-events: none;
   content:"";
   position:absolute; 
   inset:0;
@@ -1353,31 +1354,46 @@ button:hover {
 }
 
 .voting-player {
-  padding: 12px 24px;
-  border-radius: 20px;
-  font-size: 16px;
-  transition: all 0.3s ease;
-  cursor: pointer;
+  padding: 10px 18px;
+  border-radius: 999px;
+  font-size: 15px;
+  font-weight: 900;
+  transition: transform 0.18s ease, box-shadow 0.18s ease, background 0.18s ease, opacity 0.18s ease;
+  cursor: default;           /* 버튼처럼 안 보이게 */
   position: relative;
 }
 
+/* 대기중 */
 .voting-player.waiting {
-  background: #FFFFFF;
-  color: #666666;
-  border: 2px solid #CCCCCC;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-  font-weight: 400;
-  opacity: 0.7;
+  background: rgba(255,255,255,0.78);
+  color: #6B4A2A;
+  border: 2px solid rgba(139, 90, 43, 0.22);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  font-weight: 800;
+  opacity: 0.78;
 }
 
+/* 준비완료(= 다시 하러가기 누른 상태) */
 .voting-player.ready {
-  background: #FF6B00;
-  color: #FFFFFF;
-  border: 3px solid #CC5500;
-  box-shadow: 0 6px 16px rgba(255, 107, 0, 0.5), inset 0 -2px 4px rgba(0,0,0,0.3);
-  font-weight: 900;
-  transform: scale(1.1);
+  background: #E8C36A;
+  color: #1a1a1a;
+  border: 2px solid rgba(0,0,0,0.18);
+  box-shadow: 0 8px 18px rgba(232,195,106,0.35), inset 0 -2px 0 rgba(0,0,0,0.12);
+  font-weight: 950;
   opacity: 1;
+  transform: translateY(-1px); /* 살짝만 */
+}
+
+/* ready에 "준비" 배지 추가(원하면 유지, 싫으면 이 블록 삭제) */
+.voting-player.ready::after {
+  content: "준비";
+  margin-left: 10px;
+  font-size: 12px;
+  font-weight: 950;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(0,0,0,0.12);
+  color: rgba(0,0,0,0.75);
 }
 
 .voting-hint {

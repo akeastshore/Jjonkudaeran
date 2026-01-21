@@ -106,7 +106,6 @@ const AppRouter = ({
           resultTimeLeft={gameState.resultTimeLeft}
           onRestart={() => {
             if (multiplayer.gameMode === 'multi' && multiplayer.socket) {
-              console.log('🔵 [클라이언트] voteRestart 이벤트 전송');
               multiplayer.socket.emit('voteRestart');
             } else {
               gameState.setScreen('gameplay');
