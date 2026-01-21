@@ -8,10 +8,11 @@ const GameContainer = ({ canvasRef }) => {
 
   useEffect(() => {
     const handleResize = () => {
-      const margin = 40; // 여백 확보
+      const margin = 40; // 기본 여백
+      const headerHeight = 80; // 상단바 통계 공간 확보
       // 화면 너비/높이 대비 게임 화면 비율 계산 (최대 1.2배까지만 확대)
       const scaleX = (window.innerWidth - margin) / MAP_WIDTH;
-      const scaleY = (window.innerHeight - margin) / MAP_HEIGHT;
+      const scaleY = (window.innerHeight - margin - headerHeight) / MAP_HEIGHT;
       const newScale = Math.min(scaleX, scaleY, 1.2);
       setScale(Math.max(0.5, newScale)); // 최소 0.5배 보장
     };
@@ -26,10 +27,12 @@ const GameContainer = ({ canvasRef }) => {
     <div style={{
       display: 'flex',
       justifyContent: 'center',
-      alignItems: 'center',
+      alignItems: 'flex-start', // 상단 정렬로 변경 (타이머와 간격 축소)
       width: '100%',
-      height: '100vh',
-      overflow: 'hidden'
+      height: '100%',
+      flex: 1,
+      overflow: 'hidden',
+      paddingTop: '10px'
     }}>
       <div style={{
         transform: `scale(${scale})`,

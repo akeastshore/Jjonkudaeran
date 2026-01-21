@@ -108,7 +108,8 @@ const AppRouter = ({
             if (multiplayer.gameMode === 'multi' && multiplayer.socket) {
               multiplayer.socket.emit('voteRestart');
             } else {
-              gameState.setScreen('gameplay');
+              // [FIX] Call handleStartGame to reset gameStartTime
+              handlers.handleStartGame();
             }
           }}
           onGoHome={handlers.handleGoHome}
