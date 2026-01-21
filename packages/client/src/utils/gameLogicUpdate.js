@@ -193,7 +193,7 @@ export const createGameLogicUpdate = (
               centerItemOnGrid(droppedItem, facingX, facingY);
             }
           } else {
-            const setProcessing = (nextId, duration) => {
+            const startProcessing = (nextId, duration) => {
               droppedItem.status = 'processing';
               droppedItem.finishTime = now + duration;
               droppedItem.nextId = nextId;
@@ -208,14 +208,12 @@ export const createGameLogicUpdate = (
 
             // ★ [문제 해결의 핵심] 아이템 교체 함수
             const replaceItemWith = (newItemId) => {
-              // 1. 내려놓는 기계(Zone)의 정중앙 좌표를 직접 계산합니다.
-              // (들고 있던 아이템의 좌표는 업데이트가 안 되어 있을 수 있으므로 쓰지 않습니다!)
-              const targetX = facingZone.x + (facingZone.w - ITEM_SIZE) / 2;
-              const targetY = facingZone.y + (facingZone.h - ITEM_SIZE) / 2;
-
-              // 2. 정확한 위치에 새 아이템 생성
-              const newItem = createNewItem(newItemId, targetX, targetY);
+              // 1. 새 아이템 생성 (임시 좌표 0,0)
+              const newItem = createNewItem(newItemId, 0, 0);
               newItem.status = 'placed'; // 상태 고정
+
+              // 2. Zone 중앙에 배치 (centerItemInZone 함수 활용)
+              centerItemInZone(newItem, facingZone);
 
               cookedItems.push(newItem);
               deleteItemLocally(droppedItem.uid);
@@ -317,7 +315,7 @@ export const createGameLogicUpdate = (
                 console.log(`[Burner] Added ${droppedItem.id}. Items:`, burner.items, { hasMilk, hasCocoa }); // [DEBUG]
 
                 const nextState = (hasMilk && hasCocoa)
-                  ? 'final_processing' : 'mixing';
+                  ? 'final_processing' : burner.state; // 둘 다 있을 때만 변경, 아니면 유지
 
                 console.log(`[Burner] Transitioning to: ${nextState}`); // [DEBUG]
 

@@ -72,11 +72,15 @@ export const useGameTimer = (gameState, disconnectSocket, multiplayer) => {
       timerRef.current = setInterval(() => {
         const now = Date.now();
         // 3초 카운트다운 후 GAME_DURATION 초 진행
-        // 실제 게임 경과 시간 = (현재시간 - 시작시간) - 3초(카운트다운)
         const totalElapsed = (now - startTime) / 1000;
         const gameElapsed = totalElapsed - 3;
 
         const remain = Math.max(0, Math.ceil(GAME_DURATION - gameElapsed));
+
+        // [DEBUG] Monitor timer values
+        if (Math.random() < 0.05) { // Log occasionally to avoid spam
+          console.log(`[Timer Debug] Now: ${now}, Start: ${startTime}, Elapsed: ${totalElapsed}, GameElapsed: ${gameElapsed}, Remain: ${remain}`);
+        }
 
         gameState.setTimeLeft(remain);
 
@@ -85,7 +89,7 @@ export const useGameTimer = (gameState, disconnectSocket, multiplayer) => {
           gameState.setIsPlaying(false);
           gameState.setScreen('result');
         }
-      }, 500); // 0.5초마다 갱신 (화면은 remain 계산값으로 표시)
+      }, 100); // 0.1초마다 갱신하여 반응성 향상
     }
     return () => clearInterval(timerRef.current);
   }, [gameState.isPlaying, gameState.gameStartTime]);
@@ -99,8 +103,8 @@ export const useGameTimer = (gameState, disconnectSocket, multiplayer) => {
       alert("캐릭터를 선택해주세요!");
       return;
     }
-    // [NEW] 서버 시작 시간 저장
-    if (serverStartTime) {
+    // [NEW] 서버 시작 시간 저장 (숫자일 때만 저장, 이벤트 객체 방지)
+    if (serverStartTime && typeof serverStartTime === 'number') {
       gameState.setGameStartTime(serverStartTime);
     } else {
       gameState.setGameStartTime(Date.now());

@@ -9,11 +9,11 @@ import GameplayScreen from './screens/GameplayScreen';
 import ResultScreen from './screens/ResultScreen';
 import MultiLobby from '../MultiLobby';
 
-const AppRouter = ({ 
-  screen, 
-  gameState, 
-  multiplayer, 
-  handlers 
+const AppRouter = ({
+  screen,
+  gameState,
+  multiplayer,
+  handlers
 }) => {
   switch (screen) {
     case 'login':
@@ -62,7 +62,7 @@ const AppRouter = ({
           socket={multiplayer.socket}
           roomId={multiplayer.roomId}
           characters={CHARACTERS}
-          onGameStart={() => gameState.setScreen('gameplay')}
+          onGameStart={handlers.handleStartGame}
           setSelectedChar={gameState.setSelectedChar}
         />
       );
