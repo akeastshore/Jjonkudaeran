@@ -17,8 +17,6 @@ export const useMultiplayerSync = (
     socketRef.current = socketProp;
     const socket = socketRef.current;
 
-    // 게임 동기화 요청
-    socket.emit('syncGame');
 
     // 플레이어 이동 처리
     const handlePlayerMoved = (data) => {
@@ -81,7 +79,18 @@ export const useMultiplayerSync = (
     };
 
     // 리스너 등록
+    const handleRoomUpdate = (roomPlayers) => {
+      console.log('Room Update Received:', roomPlayers); // [DEBUG]
+      Object.keys(roomPlayers).forEach(id => {
+        if (id !== socket.id) {
+          otherPlayersRef.current[id] = roomPlayers[id];
+        }
+      });
+    };
+
+    // 리스너 등록
     socket.on("playerMoved", handlePlayerMoved);
+    socket.on("roomUpdate", handleRoomUpdate);
     socket.on("newPlayer", handleNewPlayer);
     socket.on("playerDisconnected", handlePlayerDisconnected);
     socket.on("updateItemState", handleUpdateItemState);
@@ -89,9 +98,13 @@ export const useMultiplayerSync = (
     socket.on("updateFireState", handleUpdateFireState);
     socket.on("updateBurnerState", handleUpdateBurnerState);
 
+    // 게임 동기화 요청 (리스너 등록 후 요청)
+    socket.emit('syncGame');
+
     // 정리
     return () => {
       socket.off("playerMoved", handlePlayerMoved);
+      socket.off("roomUpdate", handleRoomUpdate);
       socket.off("newPlayer", handleNewPlayer);
       socket.off("playerDisconnected", handlePlayerDisconnected);
       socket.off("updateItemState", handleUpdateItemState);

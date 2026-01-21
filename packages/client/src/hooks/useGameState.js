@@ -10,12 +10,14 @@ export const useGameState = () => {
   const [timeLeft, setTimeLeft] = useState(3);
   const [score, setScore] = useState(0);
   const [resultTimeLeft, setResultTimeLeft] = useState(10);
+  const [gameStartTime, setGameStartTime] = useState(null);
 
   const resetGameState = () => {
     setCountDown(3);
     setIsPlaying(false);
     setTimeLeft(3);
     setScore(0);
+    setGameStartTime(null);
   };
 
   return {
@@ -38,5 +40,7 @@ export const useGameState = () => {
     resultTimeLeft,
     setResultTimeLeft,
     resetGameState,
+    gameStartTime,
+    setGameStartTime
   };
 };

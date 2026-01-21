@@ -1,20 +1,20 @@
 // src/MultiLobby.jsx
 import React, { useState, useEffect } from 'react';
-import { 
-  Button, 
-  RoomCode, 
-  Timer, 
-  Panel, 
-  CharacterItem, 
-  PlayerListItem 
+import {
+  Button,
+  RoomCode,
+  Timer,
+  Panel,
+  CharacterItem,
+  PlayerListItem
 } from './components/ui';
 
 const MultiLobby = ({ socket, roomId, characters, onGameStart, setSelectedChar }) => {
   const [players, setPlayers] = useState({});
   const [myCharId, setMyCharId] = useState(null);
-  
+
   // ★ 타이머 상태 (120초 = 2분)
-  const [timeLeft, setTimeLeft] = useState(120); 
+  const [timeLeft, setTimeLeft] = useState(120);
 
   useEffect(() => {
     if (!socket) return;
@@ -34,9 +34,9 @@ const MultiLobby = ({ socket, roomId, characters, onGameStart, setSelectedChar }
       }
     });
 
-    socket.on('gameStart', () => {
-      console.log("게임 시작 신호 받음!");
-      onGameStart(); // 모두 준비되면 게임 시작!
+    socket.on('gameStart', ({ startTime }) => {
+      console.log("게임 시작 신호 받음! StartTime:", startTime);
+      onGameStart(startTime); // 서버 시간 전달
     });
 
     return () => {
@@ -57,7 +57,7 @@ const MultiLobby = ({ socket, roomId, characters, onGameStart, setSelectedChar }
   }, [timeLeft]);
 
   const selectChar = (charId) => {
-    if (players[socket.id]?.isReady) return; 
+    if (players[socket.id]?.isReady) return;
     setMyCharId(charId);
     setSelectedChar(charId); // gameState에도 저장
     socket.emit('selectCharacter', charId);
@@ -65,7 +65,7 @@ const MultiLobby = ({ socket, roomId, characters, onGameStart, setSelectedChar }
 
   const toggleReady = () => {
     if (!myCharId) {
-        return alert("캐릭터를 먼저 선택해주세요!");
+      return alert("캐릭터를 먼저 선택해주세요!");
     }
     socket.emit('toggleReady');
   };
@@ -134,15 +134,15 @@ const MultiLobby = ({ socket, roomId, characters, onGameStart, setSelectedChar }
                 🎮 게임 시작!
               </Button>
             ) : allReady && !isHost ? (
-              <Button 
-                variant="ready" 
+              <Button
+                variant="ready"
                 disabled={true}
                 style={{ opacity: 0.5, cursor: 'not-allowed' }}
               >
                 준비 완료
               </Button>
             ) : (
-              <Button 
+              <Button
                 variant={players[socket.id]?.isReady ? 'cancel' : 'ready'}
                 disabled={!myCharId && !players[socket.id]?.isReady}
                 onClick={toggleReady}
@@ -150,7 +150,7 @@ const MultiLobby = ({ socket, roomId, characters, onGameStart, setSelectedChar }
                 {players[socket.id]?.isReady ? '준비 취소' : '준비 완료!'}
               </Button>
             )}
-            
+
             <div className="panel-hint">
               {!myCharId
                 ? '* 캐릭터를 선택하세요!'
