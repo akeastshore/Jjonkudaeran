@@ -171,8 +171,10 @@ export const createDrawFunction = (
             let panImgSrc = '/assets/tools/flyingpan_top.png';
 
             // 요리 상태별 이미지 변경
-            if (burner.state.includes('marshmallow') || burner.state === 'mixing') {
+            if (burner.state.includes('marshmallow')) {
               panImgSrc = '/assets/tools/burner_marshmallow_top.png';
+            } else if (burner.state === 'mixing') {
+              panImgSrc = '/assets/tools/burner_mid_top.png';
             } else if (burner.state.includes('butter')) {
               panImgSrc = '/assets/tools/burner_butter_top.png';
             } else if (burner.state.includes('final')) {
@@ -264,6 +266,30 @@ export const createDrawFunction = (
         }
       }
 
+      // 전자레인지/냉장고 타이머 표시
+      if (zone.func === 'microwave' || zone.func === 'fridge') {
+        // 해당 기기 안에서 'processing' 중인 아이템 찾기 (중심점 기준)
+        const processingItem = cookedItemsRef.current.find(item => {
+          if (item.status !== 'processing') return false;
+          const cx = item.x + item.w / 2;
+          const cy = item.y + item.h / 2;
+          return cx > zone.px && cx < zone.px + zone.pw &&
+            cy > zone.py && cy < zone.py + zone.ph;
+        });
+
+        if (processingItem) {
+          ctx.fillStyle = 'white';
+          ctx.strokeStyle = 'black';
+          ctx.lineWidth = 3;
+          ctx.font = 'bold 20px Arial';
+          const remain = Math.ceil((processingItem.finishTime - Date.now()) / 1000);
+          const timerX = zone.px + zone.pw / 2;
+          const timerY = zone.py + zone.ph / 2;
+          ctx.strokeText(`${remain}s`, timerX, timerY);
+          ctx.fillText(`${remain}s`, timerX, timerY);
+        }
+      }
+
       // 불 게이지
       if (zone.func === 'fire' && fireRef.current.isFacing && !fireRef.current.isOn) {
         const progress = Math.min((Date.now() - fireRef.current.facingStartTime) / 2000, 1);
@@ -311,54 +337,85 @@ export const createDrawFunction = (
       }
     });
 
-    // 4. 다른 플레이어
+    // 4. 다른 플레이어 렌더링
+    const directionMap = { 'down': 'front', 'up': 'back', 'left': 'left', 'right': 'right' };
+    const playerScale = 1.2;
+
     Object.keys(otherPlayersRef.current).forEach(id => {
       const p = otherPlayersRef.current[id];
       if (!p) return;
 
-      ctx.fillStyle = p.color || '#888';
-      ctx.fillRect(p.x, p.y, PLAYER_SIZE, PLAYER_SIZE);
+      // charId가 있다면 이미지 그리기
+      const charDir = directionMap[p.direction || 'down'] || 'front';
+      let charImg = null;
 
-      // 눈
-      ctx.fillStyle = 'white';
-      const off = 12, sz = 8;
-      const cx = p.x + PLAYER_SIZE / 2, cy = p.y + PLAYER_SIZE / 2;
-      let lx, ly, rx, ry;
+      // p.charId가 있으면 해당 이미지 사용
+      if (p.charId) {
+        charImg = imagesRef.current[`char_${p.charId}_${charDir}`];
+      }
 
-      if (p.direction === 'up') { lx = cx - off; ly = cy - off; rx = cx + off; ry = cy - off; }
-      else if (p.direction === 'down') { lx = cx - off; ly = cy + off; rx = cx + off; ry = cy + off; }
-      else if (p.direction === 'left') { lx = cx - off; ly = cy; rx = cx + off / 2; ry = cy; }
-      else { lx = cx - off / 2; ly = cy; rx = cx + off; ry = cy; }
+      if (charImg && charImg.complete && charImg.naturalHeight !== 0) {
+        const drawW = PLAYER_SIZE;
+        const drawH = PLAYER_SIZE * playerScale;
+        const drawX = p.x;
+        const drawY = p.y - (drawH - PLAYER_SIZE) / 2;
 
-      ctx.beginPath(); ctx.arc(lx, ly, sz, 0, Math.PI * 2); ctx.fill();
-      ctx.beginPath(); ctx.arc(rx, ry, sz, 0, Math.PI * 2); ctx.fill();
+        ctx.drawImage(charImg, drawX, drawY, drawW, drawH);
 
-      ctx.fillStyle = 'black';
-      const pupilSize = sz * 0.5;
-      if (p.direction === 'up') { ly -= sz * 0.3; ry -= sz * 0.3; }
-      else if (p.direction === 'down') { ly += sz * 0.3; ry += sz * 0.3; }
-      else if (p.direction === 'left') { lx -= sz * 0.3; rx -= sz * 0.3; }
-      else { lx += sz * 0.3; rx += sz * 0.3; }
+        // 닉네임만 표시 (눈동자 등은 이미지에 포함되어 있으므로 생략)
+        ctx.fillStyle = 'white';
+        ctx.strokeStyle = 'black';
+        ctx.lineWidth = 3;
+        ctx.font = 'bold 16px Arial';
+        ctx.strokeText(p.nickname || 'Player', p.x + PLAYER_SIZE / 2, p.y - 10);
+        ctx.fillText(p.nickname || 'Player', p.x + PLAYER_SIZE / 2, p.y - 10);
 
-      ctx.beginPath(); ctx.arc(lx, ly, pupilSize, 0, Math.PI * 2); ctx.fill();
-      ctx.beginPath(); ctx.arc(rx, ry, pupilSize, 0, Math.PI * 2); ctx.fill();
+      } else {
+        // 이미지 없으면 기존 사각형(눈동자) 스타일 유지
+        ctx.fillStyle = p.color || '#888';
+        ctx.fillRect(p.x, p.y, PLAYER_SIZE, PLAYER_SIZE);
 
-      ctx.fillStyle = 'white';
-      ctx.strokeStyle = 'black';
-      ctx.lineWidth = 3;
-      ctx.font = 'bold 16px Arial';
-      ctx.strokeText(p.nickname || 'Player', p.x + PLAYER_SIZE / 2, p.y - 10);
-      ctx.fillText(p.nickname || 'Player', p.x + PLAYER_SIZE / 2, p.y - 10);
+        // 눈
+        ctx.fillStyle = 'white';
+        const off = 12, sz = 8;
+        const cx = p.x + PLAYER_SIZE / 2, cy = p.y + PLAYER_SIZE / 2;
+        let lx, ly, rx, ry;
+
+        if (p.direction === 'up') { lx = cx - off; ly = cy - off; rx = cx + off; ry = cy - off; }
+        else if (p.direction === 'down') { lx = cx - off; ly = cy + off; rx = cx + off; ry = cy + off; }
+        else if (p.direction === 'left') { lx = cx - off; ly = cy; rx = cx + off / 2; ry = cy; }
+        else { lx = cx - off / 2; ly = cy; rx = cx + off; ry = cy; }
+
+        ctx.beginPath(); ctx.arc(lx, ly, sz, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.arc(rx, ry, sz, 0, Math.PI * 2); ctx.fill();
+
+        ctx.fillStyle = 'black';
+        const pupilSize = sz * 0.5;
+        if (p.direction === 'up') { ly -= sz * 0.3; ry -= sz * 0.3; }
+        else if (p.direction === 'down') { ly += sz * 0.3; ry += sz * 0.3; }
+        else if (p.direction === 'left') { lx -= sz * 0.3; rx -= sz * 0.3; }
+        else { lx += sz * 0.3; rx += sz * 0.3; }
+
+        ctx.beginPath(); ctx.arc(lx, ly, pupilSize, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.arc(rx, ry, pupilSize, 0, Math.PI * 2); ctx.fill();
+
+        ctx.fillStyle = 'white';
+        ctx.strokeStyle = 'black';
+        ctx.lineWidth = 3;
+        ctx.font = 'bold 16px Arial';
+        ctx.strokeText(p.nickname || 'Player', p.x + PLAYER_SIZE / 2, p.y - 10);
+        ctx.fillText(p.nickname || 'Player', p.x + PLAYER_SIZE / 2, p.y - 10);
+      }
     });
 
     // 5. 내 플레이어
     const player = playerRef.current;
     const playerDirection = player.direction || 'down';
-    const directionMap = { 'down': 'front', 'up': 'back', 'left': 'left', 'right': 'right' };
+    // directionMap은 위에서 이미 정의됨
     const charDirection = directionMap[playerDirection] || 'front';
     const charImg = imagesRef.current[`playerChar_${charDirection}`];
 
-    const playerScale = 1.2;
+    // playerScale은 위에서 이미 정의됨
 
     if (charImg && charImg.complete && charImg.naturalHeight !== 0) {
       const drawW = player.w;
@@ -424,6 +481,20 @@ export const createDrawFunction = (
             return;
           }
         }
+      }
+
+      // [NEW] 전자레인지/냉장고 처리 중일 때 숨김 logic
+      if (item.status === 'processing') {
+        // 어떤 Zone 위에 있는지 확인 (중심점 기준)
+        const itemCx = item.x + item.w / 2;
+        const itemCy = item.y + item.h / 2;
+
+        const processingZone = ZONES.find(z =>
+          (z.func === 'microwave' || z.func === 'fridge') &&
+          itemCx > z.px && itemCx < z.px + z.pw &&
+          itemCy > z.py && itemCy < z.py + z.ph
+        );
+        if (processingZone) return; // 숨김
       }
 
       // 3. 화덕(Fire) 위에 있는 카다이프 숨김

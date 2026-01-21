@@ -161,7 +161,8 @@ io.on('connection', (socket) => {
           // 0.5초 후 게임 시작
           setTimeout(() => {
             room.isPlaying = true;
-            io.to(roomId).emit('gameStart');
+            const startTime = Date.now();
+            io.to(roomId).emit('gameStart', { startTime });
           }, 500);
         }
       }, 120000); // 120초 = 2분
@@ -229,139 +230,136 @@ io.on('connection', (socket) => {
     if (p && p.roomId) {
       const roomId = p.roomId;
 
-      // 게임 시작 시 모든 플레이어의 wantsRestart 초기화
-      const roomSockets = io.sockets.adapter.rooms.get(roomId);
-      if (roomSockets) {
-        roomSockets.forEach(id => {
-          if (players[id]) {
-            players[id].wantsRestart = false;
-          }
-        });
-      }
+      player.wantsRestart = false;
+    }
+  });
+}
 
       rooms[roomId].isPlaying = true;
-      io.to(roomId).emit('gameStart');
+const startTime = Date.now() + 500; // 0.5초 뒤 시작
+io.to(roomId).emit('gameStart', { startTime });
     }
   });
 
-  // 5. 퇴장
-  socket.on('disconnect', () => {
-    const p = players[socket.id];
-    if (p) {
-      const roomId = p.roomId;
-      delete players[socket.id];
+// 5. 퇴장
+socket.on('disconnect', () => {
+  const p = players[socket.id];
+  if (p) {
+    const roomId = p.roomId;
+    delete players[socket.id];
 
-      if (rooms[roomId]) {
-        rooms[roomId].currentPlayers -= 1;
-        if (rooms[roomId].currentPlayers <= 0) {
-          delete rooms[roomId];
-        } else {
-          io.to(roomId).emit('playerLeft');
-          delete rooms[roomId];
-        }
+    if (rooms[roomId]) {
+      rooms[roomId].currentPlayers -= 1;
+      if (rooms[roomId].currentPlayers <= 0) {
+        delete rooms[roomId];
+      } else {
+        io.to(roomId).emit('playerLeft');
+        delete rooms[roomId];
       }
     }
-  });
+  }
+});
 
-  function broadcastRoomUpdate(roomId) {
+function broadcastRoomUpdate(roomId) {
+  const roomSockets = io.sockets.adapter.rooms.get(roomId);
+  const roomPlayers = {};
+  if (roomSockets) {
+    roomSockets.forEach(id => { if (players[id]) roomPlayers[id] = players[id]; });
+  }
+  io.to(roomId).emit('roomUpdate', roomPlayers);
+}
+
+socket.on('syncGame', () => {
+  const p = players[socket.id];
+  if (p) {
+    // 이 요청을 보낸 사람에게만 방의 현재 멤버 목록을 보내줌
+    const roomId = p.roomId;
     const roomSockets = io.sockets.adapter.rooms.get(roomId);
     const roomPlayers = {};
     if (roomSockets) {
-      roomSockets.forEach(id => { if (players[id]) roomPlayers[id] = players[id]; });
-    }
-    io.to(roomId).emit('roomUpdate', roomPlayers);
-  }
-
-  socket.on('syncGame', () => {
-    const p = players[socket.id];
-    if (p) {
-      // 이 요청을 보낸 사람에게만 방의 현재 멤버 목록을 보내줌
-      const roomId = p.roomId;
-      const roomSockets = io.sockets.adapter.rooms.get(roomId);
-      const roomPlayers = {};
-      if (roomSockets) {
-        roomSockets.forEach(id => {
-          if (players[id]) roomPlayers[id] = players[id];
-        });
-      }
-      socket.emit('roomUpdate', roomPlayers); // 나한테만 전송
-    }
-  });
-
-  socket.on('updateItemState', (itemData) => {
-    const p = players[socket.id];
-    if (p) {
-      // 나를 제외한 방 사람들에게 "이 아이템 상태 바꿔!"라고 전달
-      socket.to(p.roomId).emit('updateItemState', itemData);
-    }
-  });
-
-  socket.on('removeItem', (uid) => {
-    const p = players[socket.id];
-    if (p) {
-      // 나를 뺀 나머지 사람들에게 "이 아이템 지워!" 전송
-      socket.to(p.roomId).emit('removeItem', uid);
-    }
-  });
-
-  // 2. [NEW] 점수 동기화
-  socket.on('updateScore', (newScore) => {
-    const p = players[socket.id];
-    if (p) {
-      // 방 정보에 점수 저장 (선택 사항이지만 안전을 위해)
-      if (rooms[p.roomId]) rooms[p.roomId].score = newScore;
-
-      // 나를 뺀 나머지 사람들에게 "점수 갱신해!" 전송
-      socket.to(p.roomId).emit('updateScore', newScore);
-    }
-  });
-
-  socket.on('playerMovement', (d) => {
-    const p = players[socket.id];
-    if (p) {
-      // 1. 서버 메모리에 최신 위치 저장 (중요!)
-      p.x = d.x;
-      p.y = d.y;
-      p.direction = d.direction;
-
-      // 2. 방 안의 다른 사람들에게 전송
-      // 이제 p가 최신 정보를 담고 있으므로 p만 보내도 됨
-      socket.to(p.roomId).emit('playerMoved', {
-        id: socket.id,
-        x: d.x,
-        y: d.y,
-        direction: d.direction,
-        color: p.color,       // 색상 정보 유지
-        nickname: p.nickname  // 닉네임 유지
+      roomSockets.forEach(id => {
+        if (players[id]) roomPlayers[id] = players[id];
       });
     }
-  });
-  // 3. [NEW] 불(Fire) 상태 동기화
-  socket.on('updateFireState', (fireData) => {
-    const p = players[socket.id];
-    if (p) {
-      // 나 빼고 방 사람들에게 "불 상태 바꿔!" 전송
-      socket.to(p.roomId).emit('updateFireState', fireData);
-    }
-  });
+    socket.emit('roomUpdate', roomPlayers); // 나한테만 전송
+  }
+});
 
-  // 4. [NEW] 버너(Burner) 상태 동기화
-  socket.on('updateBurnerState', (burnerData) => {
-    const p = players[socket.id];
-    if (p) {
-      // 나 빼고 방 사람들에게 "버너 상태 바꿔!" 전송
-      socket.to(p.roomId).emit('updateBurnerState', burnerData);
-    }
-  });
+socket.on('updateItemState', (itemData) => {
+  const p = players[socket.id];
+  if (p) {
+    // 나를 제외한 방 사람들에게 "이 아이템 상태 바꿔!"라고 전달
+    socket.to(p.roomId).emit('updateItemState', itemData);
+  }
+});
 
-  // 5. [NEW] 게임 재시작 요청 (Restart)
-  socket.on('requestRestart', () => {
-    const p = players[socket.id];
-    if (p) {
-      // 방 전체에 "게임 재시작해!" 신호 발사
-      io.to(p.roomId).emit('restartGame');
-    }
-  });
+socket.on('removeItem', (uid) => {
+  const p = players[socket.id];
+  if (p) {
+    // 나를 뺀 나머지 사람들에게 "이 아이템 지워!" 전송
+    socket.to(p.roomId).emit('removeItem', uid);
+  }
+});
+
+// 2. [NEW] 점수 동기화
+socket.on('updateScore', (newScore) => {
+  const p = players[socket.id];
+  if (p) {
+    // 방 정보에 점수 저장 (선택 사항이지만 안전을 위해)
+    if (rooms[p.roomId]) rooms[p.roomId].score = newScore;
+
+    // 나를 뺀 나머지 사람들에게 "점수 갱신해!" 전송
+    socket.to(p.roomId).emit('updateScore', newScore);
+  }
+});
+
+socket.on('playerMovement', (d) => {
+  const p = players[socket.id];
+  if (p) {
+    // 1. 서버 메모리에 최신 위치 저장 (중요!)
+    p.x = d.x;
+    p.y = d.y;
+    p.direction = d.direction;
+
+    // 2. 방 안의 다른 사람들에게 전송
+    // 이제 p가 최신 정보를 담고 있으므로 p만 보내도 됨
+    socket.to(p.roomId).emit('playerMoved', {
+      id: socket.id,
+      x: d.x,
+      y: d.y,
+      direction: d.direction,
+      color: p.color,
+      nickname: p.nickname,
+      charId: p.charId // [NEW] 캐릭터 ID 전송
+    });
+  }
+});
+// 3. [NEW] 불(Fire) 상태 동기화
+socket.on('updateFireState', (fireData) => {
+  const p = players[socket.id];
+  if (p) {
+    // 나 빼고 방 사람들에게 "불 상태 바꿔!" 전송
+    socket.to(p.roomId).emit('updateFireState', fireData);
+  }
+});
+
+// 4. [NEW] 버너(Burner) 상태 동기화
+socket.on('updateBurnerState', (burnerData) => {
+  const p = players[socket.id];
+  if (p) {
+    // 나 빼고 방 사람들에게 "버너 상태 바꿔!" 전송
+    socket.to(p.roomId).emit('updateBurnerState', burnerData);
+  }
+});
+
+// 5. [NEW] 게임 재시작 요청 (Restart)
+socket.on('requestRestart', () => {
+  const p = players[socket.id];
+  if (p) {
+    // 방 전체에 "게임 재시작해!" 신호 발사
+    io.to(p.roomId).emit('restartGame');
+  }
+});
 });
 
 
