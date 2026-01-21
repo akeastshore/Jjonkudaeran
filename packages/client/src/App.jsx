@@ -23,15 +23,17 @@ function App() {
   const { handleGoogleLogin } = useAuth(getServerUrl, gameState);
   const { handleGoHome, handleBurgerDelivered, handleStartGame } = useGameTimer(gameState, disconnectSocket, multiplayer);
 
-  // ★ 중요: 소켓이 변경될 때마다 리스너 설정
+  // 소켓이 변경될 때마다 리스너 설정
   useEffect(() => {
-    console.log('🔧 [App] useEffect 실행, socket:', multiplayer.socket?.id);
     if (multiplayer.socket) {
-      console.log('🔧 [App] 소켓 리스너 설정 시작');
-      setupSocketListeners(multiplayer.socket);
-      console.log('✅ [App] 소켓 리스너 설정 완료');
+      const cleanup = setupSocketListeners(multiplayer.socket);
+      return () => {
+        if (cleanup) {
+          cleanup();
+        }
+      };
     }
-  }, [multiplayer.socket]);
+  }, [multiplayer.socket, setupSocketListeners]);
 
   // 모든 핸들러를 하나의 객체로
   const handlers = {

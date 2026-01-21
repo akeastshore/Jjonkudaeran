@@ -14,50 +14,74 @@ export const useSocketManager = (gameState, multiplayer, disconnectSocket) => {
   }, [gameState, multiplayer, disconnectSocket]);
 
   const setupSocketListeners = useCallback((socket) => {
-    socket.on('error', (msg) => {
+    // 기존 리스너 모두 제거 (중복 방지)
+    socket.removeAllListeners('error');
+    socket.removeAllListeners('waitingUpdate');
+    socket.removeAllListeners('allPlayersJoined');
+    socket.removeAllListeners('updateScore');
+    socket.removeAllListeners('restartGame');
+    socket.removeAllListeners('playerLeft');
+    socket.removeAllListeners('roomUpdate');
+
+    const handleError = (msg) => {
       alert(msg);
       disconnectSocketRef.current();
       multiplayerRef.current.setSocket(null);
       gameStateRef.current.setScreen('lobby');
-    });
+    };
 
-    socket.on('waitingUpdate', (info) => {
+    const handleWaitingUpdate = (info) => {
       multiplayerRef.current.setWaitingInfo(info);
-    });
+    };
 
-    socket.on('allPlayersJoined', () => {
+    const handleAllPlayersJoined = () => {
       gameStateRef.current.setScreen('multi_lobby');
-    });
+    };
 
-    socket.on('updateScore', (serverScore) => {
+    const handleUpdateScore = (serverScore) => {
       gameStateRef.current.setScore(serverScore);
-    });
+    };
 
-    socket.on('restartGame', () => {
+    const handleRestartGame = () => {
       gameStateRef.current.resetGameState();
       gameStateRef.current.setScreen('multi_lobby');
-    });
+    };
 
-    socket.on('playerLeft', () => {
+    const handlePlayerLeft = () => {
       alert("플레이어가 퇴장하여 방이 사라졌습니다.");
       window.location.reload();
-    });
+    };
 
-    socket.on('roomUpdate', (playersData) => {
-      console.log('📥 [클라이언트] roomUpdate 수신:', 
-        Object.values(playersData).map(p => ({ nickname: p.nickname, wantsRestart: p.wantsRestart }))
-      );
-      console.log('🔧 [클라이언트] setRoomPlayers 호출 전');
+    const handleRoomUpdate = (playersData) => {
       multiplayerRef.current.setRoomPlayers(playersData);
-      console.log('✅ [클라이언트] setRoomPlayers 호출 완료');
       const members = Object.values(playersData).map(p => p.nickname);
       multiplayerRef.current.setWaitingInfo({
         current: Object.keys(playersData).length,
         max: 0,
         members: members
       });
-    });
-  }, []); // 의존성 배열 비움
+    };
+
+    // 리스너 등록
+    socket.on('error', handleError);
+    socket.on('waitingUpdate', handleWaitingUpdate);
+    socket.on('allPlayersJoined', handleAllPlayersJoined);
+    socket.on('updateScore', handleUpdateScore);
+    socket.on('restartGame', handleRestartGame);
+    socket.on('playerLeft', handlePlayerLeft);
+    socket.on('roomUpdate', handleRoomUpdate);
+
+    // cleanup 함수 반환
+    return () => {
+      socket.off('error', handleError);
+      socket.off('waitingUpdate', handleWaitingUpdate);
+      socket.off('allPlayersJoined', handleAllPlayersJoined);
+      socket.off('updateScore', handleUpdateScore);
+      socket.off('restartGame', handleRestartGame);
+      socket.off('playerLeft', handlePlayerLeft);
+      socket.off('roomUpdate', handleRoomUpdate);
+    };
+  }, []);
 
   return { setupSocketListeners };
 };

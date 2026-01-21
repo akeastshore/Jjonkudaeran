@@ -1,27 +1,41 @@
 // 게임 결과 화면
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 
 const ResultScreen = ({ 
   score, 
   username, 
   gameMode, 
-  roomPlayers, 
+  roomPlayers: roomPlayersFromProps, 
   socket, 
   resultTimeLeft, 
   onRestart, 
   onGoHome,
   selectedChar
 }) => {
+  // 로컬 상태로 roomPlayers 관리
+  const [roomPlayers, setRoomPlayers] = useState(roomPlayersFromProps);
+  
   const amIVoted = socket && roomPlayers[socket.id]?.wantsRestart;
 
-  // 디버깅: roomPlayers 변경 감지
+  // roomPlayers props가 변경되면 로컬 상태도 업데이트
   useEffect(() => {
-    console.log('=== ResultScreen roomPlayers 업데이트 ===');
-    console.log('전체 roomPlayers:', roomPlayers);
-    console.log('socket.id:', socket?.id);
-    console.log('내 정보:', roomPlayers[socket?.id]);
-    console.log('내가 투표했나?:', amIVoted);
-  }, [roomPlayers, socket?.id, amIVoted]);
+    setRoomPlayers(roomPlayersFromProps);
+  }, [roomPlayersFromProps]);
+
+  // ResultScreen에서 직접 roomUpdate 리스너 등록
+  useEffect(() => {
+    if (!socket || gameMode !== 'multi') return;
+    
+    const handleRoomUpdate = (playersData) => {
+      setRoomPlayers(playersData);
+    };
+
+    socket.on('roomUpdate', handleRoomUpdate);
+
+    return () => {
+      socket.off('roomUpdate', handleRoomUpdate);
+    };
+  }, [socket, gameMode]);
 
   // 두쫀쿠 개수 계산
   const playerCount = gameMode === 'multi' ? Object.keys(roomPlayers).length : 1;
@@ -73,17 +87,14 @@ const ResultScreen = ({
               {Object.keys(roomPlayers).length === 0 ? (
                 <p>플레이어 정보 로딩 중...</p>
               ) : (
-                Object.values(roomPlayers).map((p, idx) => {
-                  console.log(`🎨 [렌더링] ${p.nickname}: wantsRestart=${p.wantsRestart}`);
-                  return (
-                    <div 
-                      key={idx} 
-                      className={`voting-player ${p.wantsRestart ? 'ready' : 'waiting'}`}
-                    >
-                      {p.nickname} {p.wantsRestart ? '✅' : ''}
-                    </div>
-                  );
-                })
+                Object.values(roomPlayers).map((p, idx) => (
+                  <div 
+                    key={idx} 
+                    className={`voting-player ${p.wantsRestart ? 'ready' : 'waiting'}`}
+                  >
+                    {p.nickname}
+                  </div>
+                ))
               )}
             </div>
             <p className="voting-hint">* 전원이 동의해야 게임이 시작됩니다.</p>
