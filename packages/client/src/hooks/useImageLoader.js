@@ -31,6 +31,14 @@ export const useImageLoader = (selectedChar) => {
       imagesRef.current[`tool_${key}`] = img;
     });
 
+    // 배경 이미지 로드
+    const bgImg = new Image();
+    bgImg.src = '/assets/backgrounds/choice_bg.png';
+    bgImg.onload = () => {
+      imagesRef.current['gameBackground'] = bgImg;
+    };
+    imagesRef.current['gameBackground'] = bgImg;
+
     // 캐릭터 이미지 로드 (즉시 할당하여 로딩 시작)
     if (selectedChar) {
       console.log('캐릭터 이미지 로드 시작:', selectedChar);
