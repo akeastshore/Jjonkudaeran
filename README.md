@@ -1,6 +1,6 @@
 # 🍪 쫀쿠대란
 
-![image.png]./assets/backgrounds/login_bg.png
+![image.png](./assets/backgrounds/login_bg.png)
 
 > 몰입캠프 두쫀쿠를 못 구하니 두쫀쿠 만들기 게임을 만들었다!  
 > 이름하여 **쫀. 쿠. 대. 란.**
