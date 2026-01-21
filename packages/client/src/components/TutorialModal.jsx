@@ -79,7 +79,7 @@ const TutorialModal = ({ isOpen, onClose }) => {
     {
       title: '4) 합체(완성)',
       images: {
-        right: { src: '/assets/ingredients/dujjonku_fianl.png', size: 'large' }
+        right: { src: '/assets/ingredients/dujjonku_final.png', size: 'large' }
       },
       content: (
         <ol>
@@ -124,23 +124,23 @@ const TutorialModal = ({ isOpen, onClose }) => {
                 <div className="page-image left">
                   {Array.isArray(pages[currentPage].images.left) ? (
                     pages[currentPage].images.left.map((img, idx) => (
-                      <img 
+                      <img
                         key={idx}
-                        src={img.src} 
-                        alt="재료" 
+                        src={img.src}
+                        alt="재료"
                         className={img.size}
                       />
                     ))
                   ) : (
-                    <img 
-                      src={pages[currentPage].images.left.src || pages[currentPage].images.left} 
-                      alt="재료" 
+                    <img
+                      src={pages[currentPage].images.left.src || pages[currentPage].images.left}
+                      alt="재료"
                       className={pages[currentPage].images.left.size || ''}
                     />
                   )}
                 </div>
               )}
-              
+
               <section className="t-section">
                 <h3>{pages[currentPage].title}</h3>
                 {pages[currentPage].content}
@@ -150,17 +150,17 @@ const TutorialModal = ({ isOpen, onClose }) => {
                 <div className="page-image right">
                   {Array.isArray(pages[currentPage].images.right) ? (
                     pages[currentPage].images.right.map((img, idx) => (
-                      <img 
+                      <img
                         key={idx}
-                        src={img.src} 
-                        alt="완성품" 
+                        src={img.src}
+                        alt="완성품"
                         className={img.size}
                       />
                     ))
                   ) : (
-                    <img 
-                      src={pages[currentPage].images.right.src || pages[currentPage].images.right} 
-                      alt="완성품" 
+                    <img
+                      src={pages[currentPage].images.right.src || pages[currentPage].images.right}
+                      alt="완성품"
                       className={pages[currentPage].images.right.size || ''}
                     />
                   )}
@@ -177,8 +177,8 @@ const TutorialModal = ({ isOpen, onClose }) => {
 
         {/* 네비게이션 */}
         <div className="tutorial-navigation">
-          <button 
-            className="nav-btn prev" 
+          <button
+            className="nav-btn prev"
             onClick={goToPrevPage}
             disabled={currentPage === 0}
             aria-label="이전"
@@ -190,8 +190,8 @@ const TutorialModal = ({ isOpen, onClose }) => {
             {currentPage + 1} / {pages.length}
           </div>
 
-          <button 
-            className="nav-btn next" 
+          <button
+            className="nav-btn next"
             onClick={goToNextPage}
             disabled={currentPage === pages.length - 1}
             aria-label="다음"

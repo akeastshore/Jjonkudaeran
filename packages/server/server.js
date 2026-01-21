@@ -1,7 +1,7 @@
 // server.js
 import express from 'express';
-import { createServer } from 'http'; 
-import { Server } from 'socket.io'; 
+import { createServer } from 'http';
+import { Server } from 'socket.io';
 import cors from 'cors';
 import session from 'express-session';
 import passport from 'passport';
@@ -47,7 +47,7 @@ const io = new Server(httpServer, {
 });
 
 // --- 소켓 로직 ---
-const rooms = {}; 
+const rooms = {};
 const players = {};
 
 io.on('connection', (socket) => {
@@ -56,7 +56,7 @@ io.on('connection', (socket) => {
   // 1. 방 만들기
   socket.on('createRoom', ({ maxPlayers, nickname }) => {
     const roomId = Math.random().toString(36).substring(2, 6).toUpperCase();
-    
+
     rooms[roomId] = {
       maxPlayers: parseInt(maxPlayers),
       currentPlayers: 1,
@@ -64,12 +64,12 @@ io.on('connection', (socket) => {
     };
 
     socket.join(roomId);
-    
+
     players[socket.id] = {
       roomId: roomId,
       nickname: nickname, // 닉네임 저장
       x: 400, y: 300,
-      color: '#' + Math.floor(Math.random()*16777215).toString(16),
+      color: '#' + Math.floor(Math.random() * 16777215).toString(16),
       direction: 'down',
       holding: null,
       charId: null,
@@ -79,8 +79,8 @@ io.on('connection', (socket) => {
 
     socket.emit('roomCreated', roomId);
 
-    io.to(roomId).emit('waitingUpdate', { 
-      current: 1, 
+    io.to(roomId).emit('waitingUpdate', {
+      current: 1,
       max: rooms[roomId].maxPlayers,
       members: [nickname]
     });
@@ -103,20 +103,20 @@ io.on('connection', (socket) => {
       charId: null,
       isReady: false,
       wantsRestart: false,
-      x: 400, y: 300, color: '#' + Math.floor(Math.random()*16777215).toString(16), direction: 'down', holding: null
+      x: 400, y: 300, color: '#' + Math.floor(Math.random() * 16777215).toString(16), direction: 'down', holding: null
     };
 
     // 닉네임 목록 수집
     const roomSockets = io.sockets.adapter.rooms.get(roomId);
     const memberNames = [];
-    if(roomSockets) {
-        roomSockets.forEach(id => {
-            if(players[id]) memberNames.push(players[id].nickname);
-        });
+    if (roomSockets) {
+      roomSockets.forEach(id => {
+        if (players[id]) memberNames.push(players[id].nickname);
+      });
     }
 
-    io.to(roomId).emit('waitingUpdate', { 
-      current: room.currentPlayers, 
+    io.to(roomId).emit('waitingUpdate', {
+      current: room.currentPlayers,
       max: room.maxPlayers,
       members: memberNames
     });
@@ -130,14 +130,14 @@ io.on('connection', (socket) => {
     if (p && p.roomId) {
       const roomId = p.roomId;
       io.to(roomId).emit('allPlayersJoined');
-      
+
       // 2분(120초) 타이머 시작
       setTimeout(() => {
         const room = rooms[roomId];
         if (!room || room.isPlaying) return; // 이미 게임이 시작되었으면 무시
-        
+
         console.log(`⏰ 방 ${roomId} 시간 종료! 자동으로 게임을 시작합니다.`);
-        
+
         // 모든 플레이어에 대해
         const roomSockets = io.sockets.adapter.rooms.get(roomId);
         if (roomSockets) {
@@ -154,10 +154,10 @@ io.on('connection', (socket) => {
               player.wantsRestart = false;
             }
           });
-          
+
           // 방 상태 업데이트 전송
           broadcastRoomUpdate(roomId);
-          
+
           // 0.5초 후 게임 시작
           setTimeout(() => {
             room.isPlaying = true;
@@ -173,9 +173,9 @@ io.on('connection', (socket) => {
     if (p) {
       // 상태 토글 (누르면 켜지고, 다시 누르면 꺼짐)
       p.wantsRestart = !p.wantsRestart;
-      
+
       const roomId = p.roomId;
-      
+
       // 방 사람들에게 상태 업데이트 (화면에 누가 눌렀는지 보여주기 위해)
       broadcastRoomUpdate(roomId);
 
@@ -184,21 +184,21 @@ io.on('connection', (socket) => {
       if (roomSockets) {
         const ids = Array.from(roomSockets);
         const allAgreed = ids.every(id => players[id] && players[id].wantsRestart);
-        
-        if (allAgreed) {
-           // 1. 모든 사람의 상태 초기화 (다음 판을 위해)
-           ids.forEach(id => {
-             if (players[id]) {
-                players[id].wantsRestart = false;
-                players[id].isReady = false;
-             }
-           });
-           
-           // 2. 상태 업데이트 한번 더 전송 (초기화된 거 보여줌)
-           broadcastRoomUpdate(roomId);
 
-           // 3. 게임 시작 신호 발사!
-           io.to(roomId).emit('restartGame');
+        if (allAgreed) {
+          // 1. 모든 사람의 상태 초기화 (다음 판을 위해)
+          ids.forEach(id => {
+            if (players[id]) {
+              players[id].wantsRestart = false;
+              players[id].isReady = false;
+            }
+          });
+
+          // 2. 상태 업데이트 한번 더 전송 (초기화된 거 보여줌)
+          broadcastRoomUpdate(roomId);
+
+          // 3. 게임 시작 신호 발사!
+          io.to(roomId).emit('restartGame');
         }
       }
     }
@@ -228,7 +228,7 @@ io.on('connection', (socket) => {
     const p = players[socket.id];
     if (p && p.roomId) {
       const roomId = p.roomId;
-      
+
       // 게임 시작 시 모든 플레이어의 wantsRestart 초기화
       const roomSockets = io.sockets.adapter.rooms.get(roomId);
       if (roomSockets) {
@@ -238,7 +238,7 @@ io.on('connection', (socket) => {
           }
         });
       }
-      
+
       rooms[roomId].isPlaying = true;
       io.to(roomId).emit('gameStart');
     }
@@ -250,14 +250,14 @@ io.on('connection', (socket) => {
     if (p) {
       const roomId = p.roomId;
       delete players[socket.id];
-      
+
       if (rooms[roomId]) {
         rooms[roomId].currentPlayers -= 1;
         if (rooms[roomId].currentPlayers <= 0) {
           delete rooms[roomId];
         } else {
-             io.to(roomId).emit('playerLeft'); 
-             delete rooms[roomId]; 
+          io.to(roomId).emit('playerLeft');
+          delete rooms[roomId];
         }
       }
     }
@@ -267,7 +267,7 @@ io.on('connection', (socket) => {
     const roomSockets = io.sockets.adapter.rooms.get(roomId);
     const roomPlayers = {};
     if (roomSockets) {
-        roomSockets.forEach(id => { if (players[id]) roomPlayers[id] = players[id]; });
+      roomSockets.forEach(id => { if (players[id]) roomPlayers[id] = players[id]; });
     }
     io.to(roomId).emit('roomUpdate', roomPlayers);
   }
@@ -280,8 +280,8 @@ io.on('connection', (socket) => {
       const roomSockets = io.sockets.adapter.rooms.get(roomId);
       const roomPlayers = {};
       if (roomSockets) {
-        roomSockets.forEach(id => { 
-          if (players[id]) roomPlayers[id] = players[id]; 
+        roomSockets.forEach(id => {
+          if (players[id]) roomPlayers[id] = players[id];
         });
       }
       socket.emit('roomUpdate', roomPlayers); // 나한테만 전송
@@ -310,7 +310,7 @@ io.on('connection', (socket) => {
     if (p) {
       // 방 정보에 점수 저장 (선택 사항이지만 안전을 위해)
       if (rooms[p.roomId]) rooms[p.roomId].score = newScore;
-      
+
       // 나를 뺀 나머지 사람들에게 "점수 갱신해!" 전송
       socket.to(p.roomId).emit('updateScore', newScore);
     }
@@ -326,10 +326,10 @@ io.on('connection', (socket) => {
 
       // 2. 방 안의 다른 사람들에게 전송
       // 이제 p가 최신 정보를 담고 있으므로 p만 보내도 됨
-      socket.to(p.roomId).emit('playerMoved', { 
-        id: socket.id, 
-        x: d.x, 
-        y: d.y, 
+      socket.to(p.roomId).emit('playerMoved', {
+        id: socket.id,
+        x: d.x,
+        y: d.y,
         direction: d.direction,
         color: p.color,       // 색상 정보 유지
         nickname: p.nickname  // 닉네임 유지
@@ -345,7 +345,16 @@ io.on('connection', (socket) => {
     }
   });
 
-  // 4. [NEW] 게임 재시작 요청 (Restart)
+  // 4. [NEW] 버너(Burner) 상태 동기화
+  socket.on('updateBurnerState', (burnerData) => {
+    const p = players[socket.id];
+    if (p) {
+      // 나 빼고 방 사람들에게 "버너 상태 바꿔!" 전송
+      socket.to(p.roomId).emit('updateBurnerState', burnerData);
+    }
+  });
+
+  // 5. [NEW] 게임 재시작 요청 (Restart)
   socket.on('requestRestart', () => {
     const p = players[socket.id];
     if (p) {
@@ -362,11 +371,11 @@ const GOOGLE_CALLBACK_URL = process.env.NODE_ENV === 'production'
 
 // --- Passport & API ---
 passport.use(new GoogleStrategy({
-    clientID: process.env.GOOGLE_CLIENT_ID,
-    clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-    callbackURL: GOOGLE_CALLBACK_URL,
-  },
-  async function(accessToken, refreshToken, profile, done) {
+  clientID: process.env.GOOGLE_CLIENT_ID,
+  clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+  callbackURL: GOOGLE_CALLBACK_URL,
+},
+  async function (accessToken, refreshToken, profile, done) {
     try {
       const googleId = profile.id;
       let user = await userDB.findByGoogleId(googleId);
@@ -386,19 +395,19 @@ passport.serializeUser((user, done) => {
 passport.deserializeUser(async (id, done) => {
   console.log("🔄 유저 정보 복구 시도. ID:", id); // 로그 추가
   try {
-    const user = await userDB.findById(id); 
+    const user = await userDB.findById(id);
 
-      if (user) {
-        console.log("🙆‍♂️ 유저 찾음:", user.name || user.email);
-        done(null, user);
-      } else {
-        console.log("🙅‍♂️ DB에 유저가 없음");
-        done(null, false);
-      }
-    } catch (err) {
-      console.error("❌ 유저 복구 중 에러:", err);
-      done(err);
+    if (user) {
+      console.log("🙆‍♂️ 유저 찾음:", user.name || user.email);
+      done(null, user);
+    } else {
+      console.log("🙅‍♂️ DB에 유저가 없음");
+      done(null, false);
     }
+  } catch (err) {
+    console.error("❌ 유저 복구 중 에러:", err);
+    done(err);
+  }
 });
 
 app.get('/auth/google', (req, res, next) => {
@@ -406,7 +415,7 @@ app.get('/auth/google', (req, res, next) => {
   next();
 }, passport.authenticate('google', { scope: ['profile', 'email'] }));
 
-app.get('/auth/google/callback', 
+app.get('/auth/google/callback',
   passport.authenticate('google', { failureRedirect: '/' }),
   (req, res) => {
     // 배포 환경이므로 IP 주소로 기본값 변경 (중요!)
@@ -416,7 +425,7 @@ app.get('/auth/google/callback',
 
     // ★ [핵심] 세션 저장이 끝난 뒤에 콜백함수가 실행됩니다.
     req.session.save(() => {
-        res.send(`
+      res.send(`
           <script>
             if (window.opener) {
               // 1. 부모 창(게임 화면)에 성공 신호 보냄

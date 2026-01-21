@@ -91,19 +91,34 @@ export const createGameLogicUpdate = (
     // Processing (전자레인지, 믹서기 등 타이머 처리)
     cookedItems.forEach(item => {
       if (item.status === 'processing' && now >= item.finishTime) {
+        // 1. 아이템 정보 업데이트 (기존 코드와 동일)
         item.status = 'ground';
         item.id = item.nextId;
         item.name = getNameForIngredient(item.nextId);
         item.color = getColorForIngredient(item.nextId);
         item.holderId = null;
 
+        // 2. 현재 아이템이 놓인 위치(Zone) 찾기
         const currentZone = ZONES.find(z => isRectIntersect({ x: item.x, y: item.y, w: item.w, h: item.h }, z));
 
-        if (currentZone && (currentZone.func === 'microwave' || currentZone.func === 'fridge' ||
-          currentZone.func === 'blend' || currentZone.func === 'peel' || currentZone.func === 'fire')) {
-          placeItemInFrontOfZone(item, currentZone);
-        } else if (currentZone) {
-          centerItemInZone(item, currentZone);
+        if (currentZone) {
+          // -------------------------------------------------------------
+          // 🛠️ [수정된 부분] 기구별 위치 설정 로직
+          // -------------------------------------------------------------
+
+          // (1) 마이크로웨이브: 끝나면 기계 '위(중앙)'에 그대로 둠
+          if (currentZone.func === 'microwave') {
+            centerItemInZone(item, currentZone);
+          }
+          // (2) 다른 기구들 (냉장고, 믹서기 등): 필요하다면 '앞'으로 배출 (선택 사항)
+          // 만약 다른 기구들도 위에 두고 싶다면 이 `else if`는 지우세요.
+          else if (currentZone.func === 'fridge' || currentZone.func === 'peel') {
+            placeItemInFrontOfZone(item, currentZone);
+          }
+          // (3) 그 외 나머지: 모두 중앙 정렬
+          else {
+            centerItemInZone(item, currentZone);
+          }
         }
 
         broadcastItem(item);
@@ -129,6 +144,25 @@ export const createGameLogicUpdate = (
       } else if (burner.state === 'kadaif_processing' && now >= burner.finishTime) {
         burner.state = 'kadaif_ready';
       }
+
+      // 타는 로직 (5초 초과 시 초기화)
+      if ((burner.state === 'final_ready' || burner.state === 'kadaif_ready') &&
+        now >= burner.finishTime + 5000) {
+
+        // 메시지 설정
+        if (burner.state === 'final_ready') {
+          burner.message = "🔥피가 탔습니다🔥";
+        } else {
+          burner.message = "🔥카다이프가 탔습니다🔥";
+        }
+        burner.messageStartTime = now;
+
+        burner.state = 'empty';
+        burner.items = [];
+        if (isMultiplayer && socketRef.current) {
+          socketRef.current.emit('updateBurnerState', { ...burner, x: zone.x, y: zone.y });
+        }
+      }
     });
 
     // Cooking (레시피 체크)
@@ -141,10 +175,10 @@ export const createGameLogicUpdate = (
 
     const mixZone = ZONES.find(z => z.func === 'mix');
     if (mixZone) {
-      checkRecipe(mixZone, cookedItems, 'whiteChoco_pistachio', ['meltedWhiteChoco', 'pistachioSpread']);
+      checkRecipe(mixZone, cookedItems, 'whiteChoco_pistachio', ['meltedWhiteChoco', 'pistachioSpread_in_bowl']);
       checkRecipe(mixZone, cookedItems, 'innerpart', ['whiteChoco_pistachio', 'toastedKadaif']);
       checkRecipe(mixZone, cookedItems, 'innerpart', ['whiteChoco_pistachio', 'toastedKadaif']);
-      checkRecipe(mixZone, cookedItems, 'innerpart', ['meltedWhiteChoco', 'pistachioSpread', 'toastedKadaif']);
+      checkRecipe(mixZone, cookedItems, 'innerpart', ['meltedWhiteChoco', 'pistachioSpread_in_bowl', 'toastedKadaif']);
     }
 
     // ----------------------------------------------------------------
@@ -273,6 +307,10 @@ export const createGameLogicUpdate = (
                   burner.items = ['butter_v2'];
                   cookedItemsRef.current = cookedItemsRef.current.filter(item => item.uid !== droppedItem.uid);
                   player.holding = null;
+                  if (isMultiplayer && socketRef.current) {
+                    socketRef.current.emit('updateBurnerState', { ...burner, x: facingZone.x, y: facingZone.y });
+                    socketRef.current.emit('removeItem', droppedItem.uid);
+                  }
                   return;
                 }
               }
@@ -284,6 +322,10 @@ export const createGameLogicUpdate = (
                   burner.items.push('marshmallow');
                   cookedItemsRef.current = cookedItemsRef.current.filter(item => item.uid !== droppedItem.uid);
                   player.holding = null;
+                  if (isMultiplayer && socketRef.current) {
+                    socketRef.current.emit('updateBurnerState', { ...burner, x: facingZone.x, y: facingZone.y });
+                    socketRef.current.emit('removeItem', droppedItem.uid);
+                  }
                   return;
                 }
               }
@@ -297,7 +339,8 @@ export const createGameLogicUpdate = (
                   cookedItemsRef.current = cookedItemsRef.current.filter(item => item.uid !== droppedItem.uid);
                   player.holding = null;
                   if (isMultiplayer && socketRef.current) {
-                    socketRef.current.emit('updateBurnerState', { ...burner });
+                    // x, y 좌표 포함해서 전송 (수신측에서 키 식별용)
+                    socketRef.current.emit('updateBurnerState', { ...burner, x: facingZone.x, y: facingZone.y });
                     socketRef.current.emit('removeItem', droppedItem.uid);
                   }
                   return;
@@ -316,38 +359,126 @@ export const createGameLogicUpdate = (
                   } else {
                     burner.state = 'mixing';
                   }
-                  return;
                 }
+                if (isMultiplayer && socketRef.current) {
+                  socketRef.current.emit('updateBurnerState', { ...burner, x: facingZone.x, y: facingZone.y });
+                  socketRef.current.emit('removeItem', droppedItem.uid);
+                }
+                return;
               }
             }
-
-            // 6. 포장
-            else if (facingZone.func === 'package' && droppedItem.id === 'finalCookie') {
-              setProcessing('packagedCookie', 1000);
-            } else {
-              droppedItem.status = 'cooking';
-              centerItemInZone(droppedItem, facingZone);
-            }
           }
-        } else {
-          droppedItem.status = 'ground';
-          centerItemOnGrid(droppedItem, facingX, facingY);
-        }
 
-        droppedItem.holderId = null;
-        broadcastItem(droppedItem);
+            // 6. 포장 (즉시 완료)
+            else if (facingZone.func === 'package' && droppedItem.id === 'finalCookie') {
+          droppedItem.id = 'packagedCookie';
+          droppedItem.name = getNameForIngredient('packagedCookie');
+          droppedItem.color = getColorForIngredient('packagedCookie');
+          droppedItem.status = 'ground';
+          centerItemInZone(droppedItem, facingZone);
+          broadcastItem(droppedItem);
+        } else {
+          droppedItem.status = 'cooking';
+          centerItemInZone(droppedItem, facingZone);
+        }
       }
-      player.holding = null;
+    } else {
+      droppedItem.status = 'ground';
+      centerItemOnGrid(droppedItem, facingX, facingY);
     }
 
-    // ----------------------------------------------------------------
-    // Pickup (아이템 집기)
-    // ----------------------------------------------------------------
-    if (!player.holding && isSpacePressed) {
-      const { zone: facingZone, x: facingX, y: facingY } = getFacingInfo(player, ZONES, true);
+    droppedItem.holderId = null;
+    broadcastItem(droppedItem);
+  }
+  player.holding = null;
+}
 
-      // 1. 믹서기에서 꺼내기
-      if (facingZone && facingZone.func === 'blend' && blenderRef.current.state === 'ready') {
+// ----------------------------------------------------------------
+// Pickup (아이템 집기)
+// ----------------------------------------------------------------
+if (!player.holding && isSpacePressed) {
+  const { zone: facingZone, x: facingX, y: facingY } = getFacingInfo(player, ZONES, true);
+
+  // 1. 믹서기에서 꺼내기
+  if (facingZone && facingZone.func === 'blend' && blenderRef.current.state === 'ready') {
+    const newUid = `pistachioSpread_${now}_${Math.random()}`;
+    const newItem = {
+      id: 'pistachioSpread',
+      uid: newUid,
+      x: player.x,
+      y: player.y,
+      w: ITEM_SIZE,
+      h: ITEM_SIZE,
+      color: getColorForIngredient('pistachioSpread'),
+      name: getNameForIngredient('pistachioSpread'),
+      status: 'held',
+      holderId: socketRef.current?.id
+    };
+    cookedItemsRef.current.push(newItem);
+    player.holding = newUid;
+    blenderRef.current.state = 'empty';
+    broadcastItem(newItem);
+  }
+
+  // 2. 화덕에서 꺼내기
+  else if (facingZone && facingZone.func === 'fire') {
+    const burner = getBurnerState(facingZone);
+    if (burner.state === 'final_ready') {
+      const newUid = `dough_${now}_${Math.random()}`;
+      const newItem = {
+        id: 'dough',
+        uid: newUid,
+        x: player.x,
+        y: player.y,
+        w: ITEM_SIZE,
+        h: ITEM_SIZE,
+        color: getColorForIngredient('dough'),
+        name: getNameForIngredient('dough'),
+        status: 'held',
+        holderId: socketRef.current?.id
+      };
+      cookedItemsRef.current.push(newItem);
+      player.holding = newUid;
+      burner.state = 'empty';
+      burner.items = [];
+      broadcastItem(newItem);
+    }
+    // [수정됨: 구운 카다이프 꺼내기]
+    else if (burner.state === 'kadaif_ready') {
+      const newUid = `toastedKadaif_${now}_${Math.random()}`;
+      const newItem = {
+        id: 'toastedKadaif',
+        uid: newUid,
+        x: player.x,
+        y: player.y,
+        w: ITEM_SIZE,
+        h: ITEM_SIZE,
+        color: getColorForIngredient('toastedKadaif'),
+        name: getNameForIngredient('toastedKadaif'),
+        status: 'held',
+        holderId: socketRef.current?.id
+      };
+      cookedItemsRef.current.push(newItem);
+      player.holding = newUid;
+      burner.state = 'empty'; // 화덕 비우기
+      burner.items = [];
+      broadcastItem(newItem);
+    }
+  }
+
+  // 3. 믹싱볼(Mix)에서 꺼내기 [수정됨]
+  else if (facingZone && facingZone.func === 'mix') {
+    const bowlItem = cookedItemsRef.current.find(item =>
+      isRectIntersect({ x: item.x, y: item.y, w: item.w, h: item.h }, facingZone)
+    );
+
+    if (bowlItem) {
+      if (bowlItem.id === 'pistachioSpread_in_bowl') {
+        // 볼 안의 아이템 삭제
+        cookedItemsRef.current = cookedItemsRef.current.filter(i => i.uid !== bowlItem.uid);
+        if (isMultiplayer && socketRef.current) socketRef.current.emit('removeItem', bowlItem.uid);
+
+        // 플레이어 손에 새 스프레드 생성
         const newUid = `pistachioSpread_${now}_${Math.random()}`;
         const newItem = {
           id: 'pistachioSpread',
@@ -361,160 +492,94 @@ export const createGameLogicUpdate = (
           status: 'held',
           holderId: socketRef.current?.id
         };
+
         cookedItemsRef.current.push(newItem);
         player.holding = newUid;
-        blenderRef.current.state = 'empty';
+        broadcastItem(newItem);
+      } else {
+        // 일반 아이템 집기 (innerpart 등)
+        bowlItem.status = 'held';
+        bowlItem.holderId = socketRef.current?.id;
+        player.holding = bowlItem.uid;
+        broadcastItem(bowlItem);
+      }
+    }
+  }
+
+  // 4. 바닥/재료 집기 (기본)
+  else {
+    const pickupRange = {
+      x: facingX,
+      y: facingY,
+      w: GRID_SIZE,
+      h: GRID_SIZE
+    };
+
+    const target = cookedItems
+      .filter(i => i.status === 'ground' || i.status === 'cooking' || i.status === 'placed')
+      .find(i => isRectIntersect(pickupRange, i));
+
+    if (target) {
+      target.status = 'held';
+      target.holderId = socketRef.current?.id;
+      player.holding = target.uid;
+      broadcastItem(target);
+    } else if (facingZone && facingZone.ingredient) {
+      const baseItem = items[facingZone.ingredient];
+      if (baseItem.status === 'spawn') {
+        const newUid = `${baseItem.id}_${now}_${Math.random()}`;
+        const newItem = { ...baseItem, uid: newUid, x: player.x, y: player.y, status: 'held', holderId: socketRef.current?.id };
+
+        // 재료 변환 로직
+        if (newItem.id === 'kadaif') {
+          newItem.id = 'kadaif_v1';
+          newItem.color = getColorForIngredient('kadaif_v1');
+          newItem.name = getNameForIngredient('kadaif_v1');
+        }
+        if (newItem.id === 'butter') {
+          newItem.id = 'butter_v2';
+          newItem.color = getColorForIngredient('butter_v2');
+          newItem.name = getNameForIngredient('butter_v2');
+        }
+        if (newItem.id === 'milkPowder') {
+          newItem.id = 'milkPowder_v2';
+          newItem.color = getColorForIngredient('milkPowder_v2');
+          newItem.name = getNameForIngredient('milkPowder_v2');
+        }
+        if (newItem.id === 'cocoa') {
+          newItem.id = 'cocoa_v2';
+          newItem.color = getColorForIngredient('cocoa_v2');
+          newItem.name = getNameForIngredient('cocoa_v2');
+        }
+
+        cookedItems.push(newItem);
+        player.holding = newUid;
         broadcastItem(newItem);
       }
-
-      // 2. 화덕에서 꺼내기
-      else if (facingZone && facingZone.func === 'fire') {
-        const burner = getBurnerState(facingZone);
-        if (burner.state === 'final_ready') {
-          const newUid = `dough_${now}_${Math.random()}`;
-          const newItem = {
-            id: 'dough',
-            uid: newUid,
-            x: player.x,
-            y: player.y,
-            w: ITEM_SIZE,
-            h: ITEM_SIZE,
-            color: getColorForIngredient('dough'),
-            name: getNameForIngredient('dough'),
-            status: 'held',
-            holderId: socketRef.current?.id
-          };
-          cookedItemsRef.current.push(newItem);
-          player.holding = newUid;
-          burner.state = 'empty';
-          burner.items = [];
-          broadcastItem(newItem);
-        }
-        // [수정됨: 구운 카다이프 꺼내기]
-        else if (burner.state === 'kadaif_ready') {
-          const newUid = `toastedKadaif_${now}_${Math.random()}`;
-          const newItem = {
-            id: 'toastedKadaif',
-            uid: newUid,
-            x: player.x,
-            y: player.y,
-            w: ITEM_SIZE,
-            h: ITEM_SIZE,
-            color: getColorForIngredient('toastedKadaif'),
-            name: getNameForIngredient('toastedKadaif'),
-            status: 'held',
-            holderId: socketRef.current?.id
-          };
-          cookedItemsRef.current.push(newItem);
-          player.holding = newUid;
-          burner.state = 'empty'; // 화덕 비우기
-          burner.items = [];
-          broadcastItem(newItem);
-        }
-      }
-
-      // 3. 믹싱볼(Mix)에서 꺼내기 [수정됨]
-      else if (facingZone && facingZone.func === 'mix') {
-        const bowlItem = cookedItemsRef.current.find(item =>
-          item.id === 'pistachioSpread_in_bowl' &&
-          isRectIntersect({ x: item.x, y: item.y, w: item.w, h: item.h }, facingZone)
-        );
-
-        if (bowlItem) {
-          // 볼 안의 아이템 삭제
-          cookedItemsRef.current = cookedItemsRef.current.filter(i => i.uid !== bowlItem.uid);
-          if (isMultiplayer && socketRef.current) socketRef.current.emit('removeItem', bowlItem.uid);
-
-          // 플레이어 손에 새 스프레드 생성
-          const newUid = `pistachioSpread_${now}_${Math.random()}`;
-          const newItem = {
-            id: 'pistachioSpread',
-            uid: newUid,
-            x: player.x,
-            y: player.y,
-            w: ITEM_SIZE,
-            h: ITEM_SIZE,
-            color: getColorForIngredient('pistachioSpread'),
-            name: getNameForIngredient('pistachioSpread'),
-            status: 'held',
-            holderId: socketRef.current?.id
-          };
-
-          cookedItemsRef.current.push(newItem);
-          player.holding = newUid;
-          broadcastItem(newItem);
-        }
-      }
-
-      // 4. 바닥/재료 집기 (기본)
-      else {
-        const pickupRange = {
-          x: facingX,
-          y: facingY,
-          w: GRID_SIZE,
-          h: GRID_SIZE
-        };
-
-        const target = cookedItems
-          .filter(i => i.status === 'ground' || i.status === 'cooking' || i.status === 'placed')
-          .find(i => isRectIntersect(pickupRange, i));
-
-        if (target) {
-          target.status = 'held';
-          target.holderId = socketRef.current?.id;
-          player.holding = target.uid;
-          broadcastItem(target);
-        } else if (facingZone && facingZone.ingredient) {
-          const baseItem = items[facingZone.ingredient];
-          if (baseItem.status === 'spawn') {
-            const newUid = `${baseItem.id}_${now}_${Math.random()}`;
-            const newItem = { ...baseItem, uid: newUid, x: player.x, y: player.y, status: 'held', holderId: socketRef.current?.id };
-
-            // 재료 변환 로직
-            if (newItem.id === 'kadaif') {
-              newItem.id = 'kadaif_v1';
-              newItem.color = getColorForIngredient('kadaif_v1');
-              newItem.name = getNameForIngredient('kadaif_v1');
-            }
-            if (newItem.id === 'butter') {
-              newItem.id = 'butter_v2';
-              newItem.color = getColorForIngredient('butter_v2');
-              newItem.name = getNameForIngredient('butter_v2');
-            }
-            if (newItem.id === 'milkPowder') {
-              newItem.id = 'milkPowder_v2';
-              newItem.color = getColorForIngredient('milkPowder_v2');
-              newItem.name = getNameForIngredient('milkPowder_v2');
-            }
-            if (newItem.id === 'cocoa') {
-              newItem.id = 'cocoa_v2';
-              newItem.color = getColorForIngredient('cocoa_v2');
-              newItem.name = getNameForIngredient('cocoa_v2');
-            }
-
-            cookedItems.push(newItem);
-            player.holding = newUid;
-            broadcastItem(newItem);
-          }
-        }
-      }
     }
+  }
+}
 
-    // Exit delivery
-    const heldItem = cookedItems.find(i => i.uid === player.holding);
-    if (heldItem && isSpacePressed && nearbyZone && nearbyZone.type === 'exit') {
-      if (heldItem.id === 'packagedCookie') {
-        onBurgerDelivered();
+// Exit delivery
+const heldItem = cookedItems.find(i => i.uid === player.holding);
+if (heldItem && isSpacePressed) {
+  // interactRect를 사용하여 플레이어 주변의 zones 확인
+  const exitZone = ZONES.find(zone =>
+    zone.type === 'exit' && isRectIntersect(interactRect, zone)
+  );
 
-        const idx = cookedItems.indexOf(heldItem);
-        if (idx > -1) cookedItems.splice(idx, 1);
-        player.holding = null;
+  if (exitZone && heldItem.id === 'packagedCookie') {
+    onBurgerDelivered();
 
-        if (isMultiplayer && socketRef.current) {
-          socketRef.current.emit('removeItem', heldItem.uid);
-          socketRef.current.emit('updateScore', score + 1);
-        }
-      }
+    const idx = cookedItems.indexOf(heldItem);
+    if (idx > -1) cookedItems.splice(idx, 1);
+    player.holding = null;
+
+    if (isMultiplayer && socketRef.current) {
+      socketRef.current.emit('removeItem', heldItem.uid);
+      socketRef.current.emit('updateScore', score + 1);
     }
+  }
+}
   };
 };

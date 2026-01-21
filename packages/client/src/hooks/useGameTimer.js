@@ -1,6 +1,10 @@
 // 게임 타이머 관리 훅
 import { useEffect, useRef, useCallback } from 'react';
 
+import {
+  GAME_DURATION,
+} from '../constants/gameConstants';
+
 export const useGameTimer = (gameState, disconnectSocket, multiplayer) => {
   const timerRef = useRef(null);
 
@@ -35,7 +39,7 @@ export const useGameTimer = (gameState, disconnectSocket, multiplayer) => {
     if (gameState.screen === 'gameplay') {
       gameState.setCountDown(3);
       gameState.setIsPlaying(false);
-      gameState.setTimeLeft(3);
+      gameState.setTimeLeft(GAME_DURATION);
       gameState.setScore(0);
 
       const countInterval = setInterval(() => {
