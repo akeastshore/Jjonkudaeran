@@ -70,7 +70,7 @@ export const createDrawFunction = (
           if (zone.ingredient === 'milkPowder') scale = 1.4;
           else if (zone.ingredient === 'kadaif') scale = 1.3;
           else if (zone.ingredient.includes('pistachio')) {
-            scale = 1.2;
+            scale = 0.7;
           }
 
           const imgSize = zone.pw * scale;
@@ -114,8 +114,8 @@ export const createDrawFunction = (
         // 믹싱볼(mix)에 피스타치오 스프레드가 있으면 이미지 변경
         if (zone.func === 'mix') {
           const hasSpread = cookedItemsRef.current.some(item =>
-            item.id === 'pistachioSpread' &&
-            (item.status === 'cooking' || item.status === 'ground') &&
+            (item.id === 'pistachioSpread' || item.id === 'pistachioSpread_in_bowl') &&
+            (item.status === 'cooking' || item.status === 'ground' || item.status === 'placed') &&
             item.x + item.w > zone.px && item.x < zone.px + zone.pw &&
             item.y + item.h > zone.py && item.y < zone.py + zone.ph
           );
@@ -143,6 +143,11 @@ export const createDrawFunction = (
             toolScale = 1.2; // 전자레인지 크기 줄임
           } else if (zone.func === 'fridge') {
             toolScale = 1.2; // 냉장고 크기 줄임
+          }
+
+          // 피스타치오 스프레드 담긴 볼 크기 키우기
+          if (toolImgSrc.includes('pistachio_spread_bowl')) {
+            toolScale = 1.8;
           }
 
           const imgRatio = toolImg.width / toolImg.height;
@@ -229,18 +234,7 @@ export const createDrawFunction = (
                 });
               }
 
-              // 카다이프 렌더링
-              if (burner.state === 'kadaif_processing' || burner.state === 'kadaif_ready') {
-                const kadaifId = burner.state === 'kadaif_ready' ? 'toastedKadaif' : 'kadaif_v1';
-                const kadaifImg = imagesRef.current[kadaifId];
 
-                if (kadaifImg && kadaifImg.complete && kadaifImg.naturalHeight !== 0) {
-                  const itemSize = panWidth * 0.5;
-                  const itemX = panX + (panWidth - itemSize) / 2;
-                  const itemY = panY + (panHeight - itemSize) / 2 - 10;
-                  ctx.drawImage(kadaifImg, itemX, itemY, itemSize, itemSize);
-                }
-              }
             }
           }
         }
@@ -435,7 +429,7 @@ export const createDrawFunction = (
       if (heldItem) {
         let heldScale = 1.0; // 기본 크기
         if (heldItem.id === 'pistachio') {
-          heldScale = 0.8; // 피스타치오만 80% 크기로 줄임 (원하는 숫자로 조절 가능)
+          heldScale = 0.5; // 피스타치오만 50% 크기로 줄임
         }
 
         // 배율이 적용된 실제 그리기 크기 계산
@@ -515,9 +509,13 @@ export const createDrawFunction = (
       }
 
       if (item.id.includes('pistachio')) {
-        sizeMultiplier = 1.2; // 피스타치오 크게
+        sizeMultiplier = 0.8; // 피스타치오만 80% 크기로 줄임 (0.7 -> 0.8)
       } else if (item.id === 'peeledPistachio') {
         sizeMultiplier = 2.0;
+      } else if (item.id === 'packagedCookie') {
+        sizeMultiplier = 1.5; // 패키징된 쿠키(wrapped_dujjonku) 크기 확대
+      } else if (item.id === 'whiteChoco_pistachio') {
+        sizeMultiplier = 2.5; // 화이트 초콜릿 피스타치오 스프레드 엄청 확대
       }
 
       // 5. 실제 그리기
